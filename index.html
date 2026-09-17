@@ -1,0 +1,110 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bioacoustics Dashboards</title>
+<meta name="description" content="Browser tools for passive acoustic monitoring: BirdNET validation, clip review, detection exploration.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0d1614; --ink2:#132420; --ink3:#1b2f29; --line:#26392f;
+    --txt:#e8efe9; --mut:#8aa399; --mut-dim:#5c7268;
+    --teal:#3fd0c9; --leaf:#6fcf7d; --lehua:#ff6b5e; --gold:#f4c95d;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:var(--ink);color:var(--txt);font-family:"DM Sans",system-ui,sans-serif;
+       font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+  .mono{font-family:"JetBrains Mono",ui-monospace,monospace}
+  .wrap{max-width:860px;margin:0 auto;padding:56px 16px 80px}
+  header{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+  .mark{width:11px;height:11px;border-radius:50%;background:var(--teal);box-shadow:0 0 12px var(--teal);flex:none}
+  h1{margin:0;font-size:27px;letter-spacing:-.2px}
+  .lede{color:var(--mut);margin:0 0 6px;max-width:64ch}
+  .lede b{color:var(--txt);font-weight:500}
+  .rule{height:1px;background:var(--line);margin:30px 0 26px}
+  h2{font-size:11px;text-transform:uppercase;letter-spacing:.9px;color:var(--mut-dim);
+     margin:0 0 14px;font-weight:600}
+  .grid{display:grid;gap:12px}
+  a.card{display:block;text-decoration:none;color:inherit;background:var(--ink2);
+    border:1px solid var(--line);border-radius:11px;padding:16px 18px;transition:border-color .12s,transform .12s}
+  a.card:hover{border-color:var(--teal);transform:translateY(-1px)}
+  a.card.off{pointer-events:none;opacity:.5}
+  .ct{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
+  .ct b{font-size:16.5px;font-weight:700}
+  .tag{font-family:"JetBrains Mono",monospace;font-size:9.5px;color:var(--mut);
+    background:var(--ink);border:1px solid var(--line);border-radius:4px;padding:1px 6px;letter-spacing:0}
+  .tag.new{color:var(--leaf);border-color:#2f5238}
+  .tag.soon{color:var(--gold);border-color:#4a3f20}
+  .cd{color:var(--mut);font-size:13.5px;margin-top:5px}
+  .meta{display:flex;gap:14px;margin-top:9px;font-size:11.5px}
+  .meta a{color:var(--teal);text-decoration:none;border-bottom:1px solid transparent}
+  .meta a:hover{border-bottom-color:var(--teal)}
+  .note{background:var(--ink2);border:1px solid var(--line);border-left:3px solid var(--gold);
+    border-radius:9px;padding:13px 16px;font-size:13px;color:var(--mut);margin-top:26px}
+  .note b{color:var(--txt)}
+  footer{margin-top:40px;color:var(--mut-dim);font-size:12.5px}
+  footer a{color:var(--mut);text-decoration:none;border-bottom:1px solid var(--line)}
+  footer a:hover{color:var(--teal)}
+  @media (max-width:560px){ .wrap{padding:36px 16px 60px} h1{font-size:23px} }
+</style>
+</head><body>
+<div class="wrap">
+  <header><span class="mark"></span><h1>Bioacoustics Dashboards</h1></header>
+  <p class="lede">Small browser tools for passive acoustic monitoring. Each one is a
+  single HTML file that runs offline. <b>Your audio is read from your own disk and
+  never leaves your machine.</b></p>
+
+  <div class="rule"></div>
+
+  <h2>Tools</h2>
+  <div class="grid">
+
+    <a class="card" href="birdnet-validator/">
+      <div class="ct"><b>BirdNET Validator</b><span class="tag new">v1.0.0</span></div>
+      <div class="cd">Review BirdNET detections one class at a time, label true and false
+      positives with hotkeys, and fit the confidence threshold that buys a target
+      precision. Clips are cut on demand from hour-long recordings.</div>
+      <div class="meta"><span class="mono">open →</span></div>
+    </a>
+
+    <a class="card" href="clip-reviewer/">
+      <div class="ct"><b>Clip Reviewer</b></div>
+      <div class="cd">Lightweight one-at-a-time labeller for a folder of pre-cut segments.</div>
+      <div class="meta"><span class="mono">open →</span></div>
+    </a>
+
+    <a class="card" href="amakihi-meme-explorer/">
+      <div class="ct"><b>Amakihi Meme Explorer</b></div>
+      <div class="cd">Song-type structure and sharing across Hawaiʻi ʻAmakihi recordings.
+      The dataset is embedded, so the page is large but needs nothing else.</div>
+      <div class="meta"><span class="mono">open →</span></div>
+    </a>
+
+    <a class="card off">
+      <div class="ct"><b>Suaq Swamp Dashboard</b><span class="tag soon">not added yet</span></div>
+      <div class="cd">Placeholder — drop the HTML into <span class="mono">suaq-swamp/index.html</span> and this link works.</div>
+    </a>
+
+    <a class="card" href="https://github.com/blegottesman/bioacoustics-dashboards/tree/main/duke-farms-explorer">
+      <div class="ct"><b>Duke Farms Detection Explorer</b><span class="tag">R / Shiny</span></div>
+      <div class="cd">Spatial and temporal exploration of BirdNET detections. Runs in R
+      rather than the browser, so it is downloaded and run locally.</div>
+      <div class="meta"><span class="mono">how to run →</span></div>
+    </a>
+
+  </div>
+
+  <div class="note"><b>Browser support.</b> Opening whole <i>folders</i> of audio needs
+  the File System Access API, which ships in Chrome, Edge, Opera and Arc but not
+  Safari or Firefox. The tools still work there — audio comes in through a file
+  picker instead — but for hour-long archives Chrome or Edge is markedly less
+  painful.</div>
+
+  <footer>
+    MIT licensed · <a href="https://github.com/blegottesman/bioacoustics-dashboards">source on GitHub</a>
+    · built by Ben Gottesman
+  </footer>
+</div>
+</body></html>

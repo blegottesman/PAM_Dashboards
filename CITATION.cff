@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+title: "Bioacoustics Dashboards: browser tools for passive acoustic monitoring"
+message: "If you use these tools in work you publish, please cite the release you used."
+type: software
+authors:
+  - family-names: Gottesman
+    given-names: Ben
+repository-code: "https://github.com/blegottesman/bioacoustics-dashboards"
+url: "https://blegottesman.github.io/bioacoustics-dashboards/"
+abstract: >-
+  Self-contained browser tools for passive acoustic monitoring workflows,
+  including BirdNET detection validation with logistic-regression confidence
+  thresholds, clip review, and detection exploration. Each tool runs offline
+  in a browser and reads audio from local disk without uploading it.
+keywords:
+  - bioacoustics
+  - passive acoustic monitoring
+  - BirdNET
+  - annotation
+  - validation
+license: MIT
+version: 1.0.0
+date-released: "2026-09-16"
+# Once Zenodo has minted a DOI for a release, add it here and GitHub will show
+# a "Cite this repository" button:
+# doi: 10.5281/zenodo.XXXXXXX

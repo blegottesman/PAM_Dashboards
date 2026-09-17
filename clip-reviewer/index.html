@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Clip labeller</title>
+<style>
+:root{--ink:#0b1512;--ink2:#12201c;--line:#22332e;--txt:#dfeae6;--sub:#7d918a;--teal:#3fd0a8;--warn:#e0a060}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ink);color:var(--txt);
+     font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;overflow:hidden}
+button{background:var(--ink2);color:var(--txt);border:1px solid var(--line);border-radius:6px;
+       padding:4px 11px;font:inherit;font-size:11.5px;cursor:pointer}
+button:hover{border-color:var(--teal)}
+input,select{background:#0b1512;color:var(--txt);border:1px solid var(--line);border-radius:5px;
+             padding:3px 6px;font:inherit;font-size:11.5px}
+.sub{color:var(--sub)}
+kbd{background:#1d2f29;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;
+    padding:1px 6px;font:inherit;font-size:11px;color:var(--txt)}
+
+/* ---------- setup ---------- */
+#setup{max-width:780px;margin:0 auto;padding:34px 20px 60px;height:100vh;overflow:auto}
+h1{font-size:19px;margin:0 0 4px;letter-spacing:-.01em}
+h2{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--sub);
+   margin:26px 0 8px;font-weight:600}
+.card{background:var(--ink2);border:1px solid var(--line);border-radius:9px;padding:14px 16px}
+.zone{border:2px dashed var(--line);border-radius:9px;padding:22px;text-align:center;
+      color:var(--sub);cursor:pointer;transition:.15s}
+.zone:hover,.zone.hot{border-color:var(--teal);background:#0f1d19;color:var(--txt)}
+.zone b{color:var(--txt)}
+.lab{display:flex;gap:7px;align-items:center;margin:5px 0}
+.lab input[type=text]{flex:1}
+.lab .key{width:74px;text-align:center}
+.sw{width:19px;height:19px;border-radius:4px;border:1px solid #0006;flex:none}
+#go{background:var(--teal);color:#06120f;font-weight:700;font-size:13px;padding:9px 26px;
+    border-color:var(--teal);margin-top:18px}
+#go:disabled{opacity:.35;cursor:not-allowed}
+table{width:100%;border-collapse:collapse;font-size:11.5px;margin-top:6px}
+td{padding:2px 8px 2px 0;color:var(--sub)}td b{color:var(--txt)}
+
+/* ---------- labelling ---------- */
+#work{display:none;height:100vh;flex-direction:column}
+#bar{display:flex;align-items:center;gap:12px;padding:7px 14px;border-bottom:1px solid var(--line);
+     background:#0d1a16;flex:none;flex-wrap:wrap}
+#prog{flex:1;min-width:120px;height:5px;background:#1a2a25;border-radius:3px;overflow:hidden}
+#prog div{height:100%;background:var(--teal);width:0;transition:width .15s}
+#stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+       padding:12px 18px;min-height:0;gap:9px}
+#spec{border:1px solid var(--line);border-radius:7px;image-rendering:pixelated;
+      max-width:min(1180px,96vw);width:100%;height:auto;background:#000}
+#meta{display:flex;gap:16px;flex-wrap:wrap;justify-content:center;font-size:11.5px;color:var(--sub)}
+#meta b{color:var(--txt)}
+#name{font-size:11px;color:var(--sub);word-break:break-all;text-align:center;max-width:96vw}
+#keys{display:flex;gap:7px;flex-wrap:wrap;justify-content:center;padding:9px 14px;
+      border-top:1px solid var(--line);background:#0d1a16;flex:none}
+.kbtn{display:flex;align-items:center;gap:6px;background:var(--ink2);border:1px solid var(--line);
+      border-radius:7px;padding:5px 11px;cursor:pointer;font-size:11.5px}
+.kbtn:hover{border-color:var(--teal)}
+.kbtn.flash{background:var(--teal);color:#06120f}
+.kbtn i{width:11px;height:11px;border-radius:3px;display:block;flex:none}
+#done{position:absolute;inset:0;display:none;align-items:center;justify-content:center;
+      background:#0b1512e8;flex-direction:column;gap:14px;z-index:20}
+#toast{position:fixed;bottom:74px;left:50%;transform:translateX(-50%);background:#1d2f29;
+       border:1px solid var(--teal);border-radius:7px;padding:7px 15px;font-size:11.5px;
+       display:none;z-index:30}
+</style></head><body>
+
+<!-- ============ SETUP ============ -->
+<div id="setup">
+  <h1>Clip labeller</h1>
+  <p class="sub" style="margin:0 0 22px">Spectrograms rendered in the browser · one keystroke per clip ·
+     nothing leaves this machine</p>
+
+  <h2>1 · Audio</h2>
+  <div class="zone" id="zAudio">
+    <b>Choose a folder of .wav files</b><br>
+    <span style="font-size:11.5px">or drag files here · subfolders included</span>
+    <input type="file" id="fAudio" webkitdirectory directory multiple style="display:none">
+  </div>
+  <div style="margin-top:7px">
+    <button id="pickFiles">pick individual files instead</button>
+    <span class="sub" id="audioInfo" style="margin-left:9px">no audio loaded</span>
+    <input type="file" id="fFiles" multiple accept=".wav,.WAV" style="display:none">
+  </div>
+
+  <h2>2 · Selection table <span class="sub" style="text-transform:none;letter-spacing:0">— optional</span></h2>
+  <div class="zone" id="zCsv" style="padding:15px">
+    <b>Drop a CSV</b> <span style="font-size:11.5px">— restricts and orders the queue, and shows its
+    columns beside each clip</span>
+    <input type="file" id="fCsv" accept=".csv,.txt,.tsv" style="display:none">
+  </div>
+  <div class="sub" id="csvInfo" style="margin-top:7px;font-size:11.5px">
+    Any column holding filenames is detected automatically. Numeric columns become sort options —
+    useful for reviewing clips near a threshold rather than at random.</div>
+
+  <h2>3 · Labels</h2>
+  <div class="card">
+    <div id="labs"></div>
+    <button id="addLab" style="margin-top:7px">add label</button>
+    <div class="sub" style="margin-top:9px;font-size:11px">
+      Hotkey can be a single letter or an arrow. <kbd>space</kbd> replays audio ·
+      <kbd>⌫</kbd> undoes · <kbd>s</kbd> skips.</div>
+  </div>
+
+  <h2>4 · Order</h2>
+  <div class="card">
+    <select id="order" style="min-width:230px"><option value="file">file order</option>
+      <option value="random">random</option></select>
+    <label class="sub" style="margin-left:14px"><input type="checkbox" id="autoplay"> play audio automatically</label>
+    <label class="sub" style="margin-left:14px"><input type="checkbox" id="resume" checked> resume previous session</label>
+  </div>
+
+  <button id="go" disabled>start labelling</button>
+  <div class="sub" id="goInfo" style="margin-top:8px;font-size:11.5px"></div>
+</div>
+
+<!-- ============ WORK ============ -->
+<div id="work">
+  <div id="bar">
+    <span id="count" class="sub"></span>
+    <div id="prog"><div></div></div>
+    <span id="tally" class="sub"></span>
+    <button id="back">⌫ undo</button>
+    <button id="save">export CSV</button>
+    <button id="quit">setup</button>
+  </div>
+
+  <div id="stage">
+    <canvas id="spec" width="1180" height="300"></canvas>
+    <div id="meta"></div>
+    <div id="name"></div>
+  </div>
+
+  <div id="keys"></div>
+  <div id="done">
+    <div style="font-size:17px">All clips labelled</div>
+    <button id="save2" style="background:var(--teal);color:#06120f;font-weight:700;padding:9px 24px">export CSV</button>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+"use strict";
+var $=function(id){return document.getElementById(id);};
+
+/* ================= FFT ================= */
+function fft(re,im){
+  var n=re.length,i,j,bit,len,ang,wr,wi,k,cr,ci,ur,ui,vr,vi,ncr,t;
+  for(i=1,j=0;i<n;i++){
+    for(bit=n>>1; j&bit; bit>>=1) j^=bit;
+    j^=bit;
+    if(i<j){t=re[i];re[i]=re[j];re[j]=t;t=im[i];im[i]=im[j];im[j]=t;}
+  }
+  for(len=2;len<=n;len<<=1){
+    ang=-2*Math.PI/len; wr=Math.cos(ang); wi=Math.sin(ang);
+    for(i=0;i<n;i+=len){
+      cr=1;ci=0;
+      for(k=0;k<len/2;k++){
+        ur=re[i+k];ui=im[i+k];
+        vr=re[i+k+len/2]*cr-im[i+k+len/2]*ci;
+        vi=re[i+k+len/2]*ci+im[i+k+len/2]*cr;
+        re[i+k]=ur+vr; im[i+k]=ui+vi;
+        re[i+k+len/2]=ur-vr; im[i+k+len/2]=ui-vi;
+        ncr=cr*wr-ci*wi; ci=cr*wi+ci*wr; cr=ncr;
+      }
+    }
+  }
+}
+var NFFT=512, HOP=128, FLO=700, FHI=8600, DBRANGE=72;
+
+function spectro(samples, sr){
+  var win=new Float32Array(NFFT), i;
+  for(i=0;i<NFFT;i++) win[i]=0.5-0.5*Math.cos(2*Math.PI*i/(NFFT-1));
+  var frames=Math.max(1,Math.floor((samples.length-NFFT)/HOP)+1);
+  var bins=NFFT/2+1;
+  var b0=Math.max(0,Math.floor(FLO/(sr/NFFT))), b1=Math.min(bins-1,Math.ceil(FHI/(sr/NFFT)));
+  var nb=b1-b0+1;
+  var out=new Float32Array(frames*nb);
+  var re=new Float64Array(NFFT), im=new Float64Array(NFFT);
+  var mx=-1e9;
+  for(var f=0;f<frames;f++){
+    var off=f*HOP;
+    for(i=0;i<NFFT;i++){ re[i]=(samples[off+i]||0)*win[i]; im[i]=0; }
+    fft(re,im);
+    for(var b=b0;b<=b1;b++){
+      var m=Math.sqrt(re[b]*re[b]+im[b]*im[b]);
+      var db=20*Math.log10(m+1e-10);
+      out[f*nb+(b-b0)]=db;
+      if(db>mx) mx=db;
+    }
+  }
+  return {db:out,frames:frames,nb:nb,max:mx,f0:b0*sr/NFFT,f1:b1*sr/NFFT};
+}
+
+/* magma-ish ramp */
+var CMAP=(function(){
+  var stops=[[0,0,4],[28,16,68],[79,18,123],[129,37,129],[181,54,122],
+             [229,80,100],[251,135,97],[254,194,135],[252,253,191]];
+  var lut=new Uint8Array(256*3);
+  for(var i=0;i<256;i++){
+    var t=i/255*(stops.length-1), k=Math.min(stops.length-2,Math.floor(t)), fr=t-k;
+    for(var c=0;c<3;c++) lut[i*3+c]=stops[k][c]+(stops[k+1][c]-stops[k][c])*fr;
+  }
+  return lut;
+})();
+
+function draw(spec, sliceStart, dur){
+  var cv=$('spec'), W=cv.width, H=cv.height, x=cv.getContext('2d');
+  var img=x.createImageData(W,H), d=img.data;
+  for(var px=0;px<W;px++){
+    var f=Math.min(spec.frames-1,Math.floor(px/W*spec.frames));
+    for(var py=0;py<H;py++){
+      var b=spec.nb-1-Math.floor(py/H*spec.nb);
+      var v=(spec.db[f*spec.nb+b]-spec.max+DBRANGE)/DBRANGE;
+      v=v<0?0:(v>1?1:v);
+      var c=(v*255)|0, o=(py*W+px)*4;
+      d[o]=CMAP[c*3]; d[o+1]=CMAP[c*3+1]; d[o+2]=CMAP[c*3+2]; d[o+3]=255;
+    }
+  }
+  x.putImageData(img,0,0);
+  /* frequency guides */
+  x.strokeStyle='rgba(255,255,255,.16)'; x.fillStyle='rgba(255,255,255,.5)';
+  x.font='10px ui-monospace'; x.lineWidth=1;
+  for(var khz=2;khz<=8;khz+=2){
+    var fy=H-(khz*1000-spec.f0)/(spec.f1-spec.f0)*H;
+    if(fy<0||fy>H) continue;
+    x.beginPath(); x.moveTo(0,fy); x.lineTo(W,fy); x.stroke();
+    x.fillText(khz+'k',4,fy-3);
+  }
+  if(sliceStart!=null&&dur){
+    var a=W*sliceStart/dur, b2=W*Math.min(sliceStart+1,dur)/dur;
+    x.fillStyle='rgba(63,208,168,.9)'; x.fillRect(a,H-5,Math.max(2,b2-a),5);
+  }
+}
+
+/* ================= state ================= */
+var FILES={}, QUEUE=[], POS=0, LABELS=[], DEC=null, CACHE={}, ROWS={}, CSVCOLS=[];
+var SORTCOL=null, RESULT={}, HIST=[], AUDIO=null;
+var PALETTE=['#3fb98f','#e07a7a','#e0a060','#5aa9e6','#c79bf0','#8fd6c0','#d8c34a','#9aa8a3'];
+var DEFAULT=[{key:'ArrowRight',name:'good'},{key:'ArrowLeft',name:'bad'},{key:'ArrowUp',name:'unsure'}];
+
+function keyName(k){
+  return k==='ArrowRight'?'→':k==='ArrowLeft'?'←':k==='ArrowUp'?'↑':k==='ArrowDown'?'↓':k.toUpperCase();
+}
+function toast(m){ var t=$('toast'); t.textContent=m; t.style.display='block';
+  clearTimeout(t._t); t._t=setTimeout(function(){t.style.display='none';},1600); }
+
+/* ================= setup ================= */
+function renderLabels(){
+  var box=$('labs'); box.innerHTML='';
+  LABELS.forEach(function(L,i){
+    var r=document.createElement('div'); r.className='lab';
+    r.innerHTML='<span class="sw" style="background:'+PALETTE[i%8]+'"></span>'+
+      '<input type="text" class="key" value="'+keyName(L.key)+'" readonly title="click, then press a key">'+
+      '<input type="text" value="'+L.name+'">'+
+      '<button class="del">remove</button>';
+    var kb=r.querySelector('.key');
+    kb.onclick=function(){ kb.value='press…'; kb.dataset.wait='1'; kb.focus(); };
+    kb.onkeydown=function(e){
+      if(kb.dataset.wait!=='1') return;
+      e.preventDefault();
+      var k=e.key;
+      if(k===' '||k==='Backspace'||k==='Enter') return toast('space, backspace and enter are reserved');
+      if(k.length===1) k=k.toLowerCase();
+      LABELS[i].key=k; kb.dataset.wait=''; renderLabels();
+    };
+    r.querySelector('input[type=text]:not(.key)').oninput=function(){ LABELS[i].name=this.value; };
+    r.querySelector('.del').onclick=function(){ LABELS.splice(i,1); renderLabels(); };
+    box.appendChild(r);
+  });
+}
+$('addLab').onclick=function(){
+  var used={}; LABELS.forEach(function(L){used[L.key]=1;});
+  var free='abcdefghijklmnopqrtuvwxyz'.split('').filter(function(c){return !used[c];})[0]||'z';
+  LABELS.push({key:free,name:'label '+(LABELS.length+1)}); renderLabels();
+};
+
+function bindZone(zone, input, handler){
+  zone.onclick=function(){ input.click(); };
+  zone.ondragover=function(e){ e.preventDefault(); zone.classList.add('hot'); };
+  zone.ondragleave=function(){ zone.classList.remove('hot'); };
+  zone.ondrop=function(e){
+    e.preventDefault(); zone.classList.remove('hot');
+    var out=[], it=e.dataTransfer.items;
+    if(it){ for(var i=0;i<it.length;i++){ var f=it[i].getAsFile(); if(f) out.push(f); } }
+    else out=Array.prototype.slice.call(e.dataTransfer.files);
+    handler(out);
+  };
+  input.onchange=function(){ handler(Array.prototype.slice.call(input.files)); };
+}
+
+function takeAudio(files){
+  files=files.filter(function(f){ return /\.wav$/i.test(f.name); });
+  if(!files.length) return toast('no .wav files in that selection');
+  FILES={}; files.forEach(function(f){ FILES[f.name]=f; });
+  $('audioInfo').innerHTML='<b style="color:var(--teal)">'+files.length.toLocaleString()+'</b> wav files';
+  ready();
+}
+bindZone($('zAudio'), $('fAudio'), takeAudio);
+$('pickFiles').onclick=function(){ $('fFiles').click(); };
+$('fFiles').onchange=function(){ takeAudio(Array.prototype.slice.call($('fFiles').files)); };
+
+function takeCsv(files){
+  var f=files[0]; if(!f) return;
+  var r=new FileReader();
+  r.onload=function(){
+    var txt=r.result.replace(/\r/g,''), lines=txt.split('\n').filter(function(l){return l.trim();});
+    if(lines.length<2) return toast('that file has no rows');
+    var sep = (lines[0].match(/\t/g)||[]).length > (lines[0].match(/,/g)||[]).length ? '\t' : ',';
+    var head=lines[0].split(sep).map(function(s){return s.trim().replace(/^"|"$/g,'');});
+    /* the filename column is the one whose values look like filenames */
+    var fcol=-1, bestHits=0;
+    for(var c=0;c<head.length;c++){
+      var hits=0, n=Math.min(40,lines.length-1);
+      for(var i=1;i<=n;i++){
+        var v=(lines[i].split(sep)[c]||'').trim().replace(/^"|"$/g,'');
+        if(/\.wav$/i.test(v)) hits++;
+      }
+      if(hits>bestHits){ bestHits=hits; fcol=c; }
+    }
+    if(fcol<0) return toast('no column of .wav filenames found');
+    ROWS={}; CSVCOLS=head.filter(function(_,i){return i!==fcol;});
+    for(var i=1;i<lines.length;i++){
+      var parts=lines[i].split(sep);
+      var name=(parts[fcol]||'').trim().replace(/^"|"$/g,'').split(/[\\/]/).pop();
+      if(!name) continue;
+      var o={};
+      head.forEach(function(h,j){ if(j!==fcol) o[h]=(parts[j]||'').trim().replace(/^"|"$/g,''); });
+      ROWS[name]=o;
+    }
+    var nums=CSVCOLS.filter(function(h){
+      var k=Object.keys(ROWS).slice(0,30), ok=0;
+      k.forEach(function(n){ if(ROWS[n][h]!==''&&isFinite(+ROWS[n][h])) ok++; });
+      return ok>k.length*0.8;
+    });
+    SORTCOL=null;
+    var sel=$('order');
+    sel.innerHTML='<option value="file">file order</option>'+
+      '<option value="csv">selection-table order</option><option value="random">random</option>'+
+      nums.map(function(h){ return '<option value="asc:'+h+'">'+h+', lowest first</option>'+
+                                   '<option value="desc:'+h+'">'+h+', highest first</option>'; }).join('');
+    sel.value='csv';
+    $('csvInfo').innerHTML='<b style="color:var(--teal)">'+Object.keys(ROWS).length.toLocaleString()+
+      '</b> rows · filename column <b>'+head[fcol]+'</b> · '+
+      (nums.length? 'sortable: '+nums.join(', ') : 'no numeric columns');
+    ready();
+  };
+  r.readAsText(f);
+}
+bindZone($('zCsv'), $('fCsv'), takeCsv);
+
+function ready(){
+  var n=Object.keys(FILES).length;
+  var go=$('go');
+  if(!n){ go.disabled=true; $('goInfo').textContent=''; return; }
+  var q=buildQueue();
+  go.disabled=!q.length;
+  var msg=q.length.toLocaleString()+' clips queued';
+  if(Object.keys(ROWS).length){
+    var miss=Object.keys(ROWS).filter(function(k){return !FILES[k];}).length;
+    if(miss) msg+=' · '+miss.toLocaleString()+' rows in the table have no matching file';
+  }
+  $('goInfo').textContent=msg;
+}
+
+function buildQueue(){
+  var names=Object.keys(FILES);
+  if(Object.keys(ROWS).length) names=names.filter(function(n){ return ROWS[n]; });
+  var mode=$('order').value;
+  if(mode==='random'){ for(var i=names.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=names[i];names[i]=names[j];names[j]=t; } }
+  else if(mode==='csv'){ var ord=Object.keys(ROWS); names=ord.filter(function(n){return FILES[n];}); }
+  else if(mode.indexOf(':')>0){
+    var p=mode.split(':'), col=p[1], sgn=p[0]==='asc'?1:-1;
+    names.sort(function(a,b){ return sgn*((+(ROWS[a]||{})[col]||0)-(+(ROWS[b]||{})[col]||0)); });
+  } else names.sort();
+  return names;
+}
+$('order').onchange=ready;
+
+/* ================= session ================= */
+function saveSession(){
+  try{ localStorage.setItem('amakihi_labels', JSON.stringify({r:RESULT,t:Date.now()})); }catch(e){}
+}
+function loadSession(){
+  try{ var j=JSON.parse(localStorage.getItem('amakihi_labels')||'null');
+       return (j&&j.r)?j.r:null; }catch(e){ return null; }
+}
+
+/* ================= labelling ================= */
+$('go').onclick=function(){
+  if(!LABELS.length) return toast('define at least one label');
+  QUEUE=buildQueue();
+  if($('resume').checked){
+    var prev=loadSession();
+    if(prev){
+      var n=0; Object.keys(prev).forEach(function(k){ if(FILES[k]){ RESULT[k]=prev[k]; n++; } });
+      if(n) toast('resumed '+n.toLocaleString()+' labels from last session');
+    }
+  }
+  POS=0;
+  while(POS<QUEUE.length && RESULT[QUEUE[POS]]) POS++;
+  DEC=new (window.AudioContext||window.webkitAudioContext)();
+  $('setup').style.display='none'; $('work').style.display='flex';
+  renderKeys(); show();
+};
+$('quit').onclick=function(){ $('work').style.display='none'; $('setup').style.display='block'; };
+
+function renderKeys(){
+  $('keys').innerHTML=LABELS.map(function(L,i){
+    return '<div class="kbtn" data-i="'+i+'"><i style="background:'+PALETTE[i%8]+'"></i>'+
+           '<kbd>'+keyName(L.key)+'</kbd> '+L.name+'</div>';
+  }).join('')+'<div class="kbtn" data-skip="1"><kbd>S</kbd> skip</div>';
+  Array.prototype.forEach.call($('keys').children,function(el){
+    el.onclick=function(){ el.dataset.skip ? advance() : assign(+el.dataset.i); };
+  });
+}
+
+function readBuf(f){
+  /* File.arrayBuffer is not present on older Safari - fall back to FileReader */
+  if(typeof f.arrayBuffer==='function') return f.arrayBuffer();
+  return new Promise(function(res,rej){
+    var r=new FileReader();
+    r.onload=function(){ res(r.result); };
+    r.onerror=function(){ rej(new Error('could not read file')); };
+    r.readAsArrayBuffer(f);
+  });
+}
+function decode(name){
+  if(CACHE[name]) return Promise.resolve(CACHE[name]);
+  var f=FILES[name];
+  if(!f) return Promise.reject(new Error('missing '+name));
+  return Promise.resolve()
+    .then(function(){ return readBuf(f); })
+    .then(function(buf){ return DEC.decodeAudioData(buf); })
+    .then(function(ab){
+      var ch=ab.getChannelData(0);
+      var o={spec:spectro(ch,ab.sampleRate), dur:ab.duration, sr:ab.sampleRate, buf:ab};
+      CACHE[name]=o;
+      var keys=Object.keys(CACHE);
+      if(keys.length>24) delete CACHE[keys[0]];
+      return o;
+    });
+}
+
+function show(){
+  if(POS>=QUEUE.length){ $('done').style.display='flex'; return; }
+  $('done').style.display='none';
+  var name=QUEUE[POS];
+  $('name').textContent=name;
+  var row=ROWS[name]||{};
+  var bits=CSVCOLS.slice(0,6).map(function(h){
+    return row[h]!==undefined&&row[h]!=='' ? h+' <b>'+row[h]+'</b>' : null;
+  }).filter(Boolean);
+  $('meta').innerHTML=bits.join('') ? bits.join(' &nbsp;·&nbsp; ') : '';
+  var n=Object.keys(RESULT).length;
+  $('count').textContent=(POS+1).toLocaleString()+' / '+QUEUE.length.toLocaleString();
+  $('prog').firstChild.style.width=(100*n/QUEUE.length)+'%';
+  var t={}; Object.keys(RESULT).forEach(function(k){ t[RESULT[k]]=(t[RESULT[k]]||0)+1; });
+  $('tally').textContent=LABELS.map(function(L){ return L.name+' '+(t[L.name]||0); }).join(' · ');
+
+  decode(name).then(function(o){
+    if(QUEUE[POS]!==name) return;
+    var ss=row.slice_start_s!==undefined?+row.slice_start_s:null;
+    draw(o.spec, ss, o.dur);
+    if($('autoplay').checked) play();
+  }).catch(function(e){
+    var x=$('spec').getContext('2d');
+    x.fillStyle='#1a0d0d'; x.fillRect(0,0,1180,300);
+    x.fillStyle='#e07a7a'; x.font='14px ui-monospace';
+    x.fillText('could not decode: '+e.message, 24, 40);
+  });
+  /* warm the next few */
+  for(var i=1;i<=3;i++) if(QUEUE[POS+i]) decode(QUEUE[POS+i]).catch(function(){});
+}
+
+function play(){
+  var o=CACHE[QUEUE[POS]]; if(!o) return;
+  try{ if(AUDIO) AUDIO.stop(); }catch(e){}
+  AUDIO=DEC.createBufferSource(); AUDIO.buffer=o.buf; AUDIO.connect(DEC.destination); AUDIO.start();
+}
+
+function assign(i){
+  var L=LABELS[i]; if(!L) return;
+  var name=QUEUE[POS];
+  RESULT[name]=L.name; HIST.push(name); saveSession();
+  var el=$('keys').children[i];
+  if(el){ el.classList.add('flash'); setTimeout(function(){ el.classList.remove('flash'); },110); }
+  advance();
+}
+function advance(){ POS++; while(POS<QUEUE.length&&RESULT[QUEUE[POS]]) POS++; show(); }
+function undo(){
+  var last=HIST.pop();
+  if(!last) return toast('nothing to undo');
+  delete RESULT[last]; saveSession();
+  POS=QUEUE.indexOf(last); show();
+}
+$('back').onclick=undo;
+
+document.addEventListener('keydown',function(e){
+  if($('work').style.display!=='flex') return;
+  if(e.target&&/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
+  var k=e.key;
+  if(k===' '){ e.preventDefault(); return play(); }
+  if(k==='Backspace'){ e.preventDefault(); return undo(); }
+  if(k==='s'||k==='S'){ e.preventDefault(); return advance(); }
+  for(var i=0;i<LABELS.length;i++){
+    var L=LABELS[i];
+    if(k===L.key || (k.length===1&&k.toLowerCase()===L.key)){ e.preventDefault(); return assign(i); }
+  }
+});
+
+/* ================= export ================= */
+function exportCsv(){
+  var extra=CSVCOLS.slice();
+  var head=['clip','label'].concat(extra);
+  var lines=[head.join(',')];
+  QUEUE.forEach(function(n){
+    if(!RESULT[n]) return;
+    var row=ROWS[n]||{};
+    lines.push([n,RESULT[n]].concat(extra.map(function(h){
+      var v=row[h]===undefined?'':String(row[h]);
+      return /[,"]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;
+    })).join(','));
+  });
+  var blob=new Blob([lines.join('\n')],{type:'text/csv'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='clip_labels_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  toast(Object.keys(RESULT).length.toLocaleString()+' labels exported');
+}
+$('save').onclick=exportCsv; $('save2').onclick=exportCsv;
+
+LABELS=DEFAULT.map(function(d){return {key:d.key,name:d.name};});
+renderLabels();
+</script>
+</body></html>
