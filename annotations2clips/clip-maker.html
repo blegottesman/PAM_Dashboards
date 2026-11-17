@@ -175,11 +175,6 @@
     </div>
   </header>
 
-  <div class="notice plain" id="embedded" hidden style="margin-bottom:18px"><span class="ico">i</span><div>
-    <p><span data-t="emb.p">You are using Clip Maker inside Claude, so the clips will arrive as one ZIP download. To save clips straight into folders on your computer, download Clip Maker as a file and open it in Chrome or Edge.</span>
-    <button type="button" class="lnk" id="btn-dl-self" style="background:none;border:0;padding:0;font:inherit;color:var(--green-ink);text-decoration:underline;cursor:pointer" data-t="emb.btn">Download Clip Maker (one file)</button></p>
-  </div></div>
-
   <!-- 1 ---------------------------------------------------------------- -->
   <section class="step">
     <h2><span class="num">1</span><span data-t="s1.h">The selection table</span> <span class="opt" data-t="s1.opt">one or several</span></h2>
@@ -549,8 +544,7 @@ var ID={
   "how.6.p":"<p>Clip Maker adalah satu halaman web mandiri: HTML untuk tata letak, CSS untuk tampilan, dan <b>JavaScript</b> untuk semua fungsinya. Tidak perlu server, instalasi, pustaka, maupun koneksi internet &mdash; file ini bisa dijalankan dari hard disk, flash disk, folder bersama, atau situs web.</p><ul><li>Ia membaca header WAV dan FLAC sendiri dan hanya menyalin byte yang dibutuhkan klip, sehingga pemotongan WAV akurat dan cepat.</li><li>FLAC didekode oleh mesin audio browser sendiri (Web Audio API), yang juga menangani pengubahan laju sampel.</li><li>Akses folder dan penyimpanan memakai File System Access API browser; jika tidak tersedia, file ZIP dibuat di halaman.</li><li>Spektrogram adalah transformasi Fourier waktu-singkat yang digambar pada elemen canvas.</li></ul><p>Kode ini ditulis oleh Claude, model AI buatan Anthropic, dan dirancang, dispesifikasikan serta disesuaikan oleh Benjamin Gottesman (K. Lisa Yang Center for Conservation Bioacoustics, Cornell Lab of Ornithology) untuk orang-orang yang bekerja dengan tabel seleksi Raven setiap hari. Kode sumbernya bisa dibaca di penyunting teks apa pun &mdash; memang dimaksudkan untuk diubah.</p>",
   "how.7.s":"Daftar clips.csv dan README",
   "how.7.p":"Satu baris per klip: nama file dan folder klip, rekaman asalnya, posisi awal dan akhir di dalam rekaman itu, tabel asalnya, dan setiap kolom dari seleksi aslinya. Ini adalah catatan apa yang telah dibuat, dan file inilah yang nanti diberikan ke skrip atau model. README.txt di sebelahnya mencatat tabel, pengaturan dan versi yang membuat klip-klip itu.",
-  "emb.p":"Anda memakai Clip Maker di dalam Claude, jadi klip akan diunduh sebagai satu file ZIP. Untuk menyimpan klip langsung ke folder di komputer Anda, unduh Clip Maker sebagai file dan buka di Chrome atau Edge.",
-  "emb.btn":"Unduh Clip Maker (satu file)","d.dlfail":"unduhan tidak jadi disimpan","d.selfdl":"Buka file yang terunduh di Chrome atau Edge",
+  "d.dlfail":"unduhan tidak jadi disimpan",
   credit:"Clip Maker v2.1 &middot; dirancang oleh Benjamin Gottesman &middot; dibuat bersama Claude",
   /* dynamic strings */
   "d.notable":"Belum ada tabel yang dimuat.","d.noaudio":"Belum ada rekaman yang dihubungkan.",
@@ -655,13 +649,6 @@ function deliverBlob(name, blob){
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(function(){ URL.revokeObjectURL(a.href); },4000);
   return Promise.resolve(true);
-}
-function downloadSelf(){
-  var own=fetch(location.href, {cache:"no-store"}).then(function(r){ if(!r.ok) throw 0; return r.text(); })
-    .catch(function(){ return "<!DOCTYPE html>\n"+document.documentElement.outerHTML; });
-  own.then(function(html){
-    return deliverBlob("clip-maker.html", new Blob([html],{type:"text/html"}));
-  }).then(function(ok){ if(ok) toast(t("d.selfdl","Open the downloaded file in Chrome or Edge")); });
 }
 
 /* ================= remembered settings ================= */
@@ -1984,8 +1971,6 @@ $("lang-en").addEventListener("click", function(){ setLang("en"); });
 $("lang-id").addEventListener("click", function(){ setLang("id"); });
 
 /* ================= start ================= */
-$("embedded").hidden=!EMBEDDED;
-$("btn-dl-self").addEventListener("click", downloadSelf);
 loadSettings();
 applyLang();
 renderTableList(); renderAudioInfo(); renderOutInfo();
