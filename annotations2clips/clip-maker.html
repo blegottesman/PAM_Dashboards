@@ -1,0 +1,1998 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clip Maker</title>
+<style>
+  :root{
+    --paper:#f7f5ef; --card:#ffffff; --line:#e3ded2; --line2:#cfc8b8;
+    --ink:#22302c; --mut:#5f6b66; --dim:#98a19c;
+    --green:#1f7a6d; --green-soft:#e4f1ee; --green-ink:#145b51;
+    --amber:#b86e00; --amber-soft:#fff3df; --red:#b3402d; --red-soft:#fbe8e3;
+    --radius:14px; --shadow:0 1px 2px rgba(34,48,44,.05), 0 6px 18px rgba(34,48,44,.05);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--paper);color:var(--ink);
+    font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+  .visually-hidden{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.92em}
+  b{font-weight:600}
+  .app{max-width:860px;margin:0 auto;padding:28px 18px 120px}
+
+  /* header */
+  .top{display:flex;align-items:flex-start;gap:16px;margin-bottom:26px}
+  .logo{width:46px;height:46px;border-radius:13px;background:var(--green);flex:none;display:grid;place-items:center}
+  .logo svg{width:26px;height:26px}
+  .top h1{margin:0;font-size:26px;font-weight:700;letter-spacing:-.01em}
+  .top p{margin:4px 0 0;color:var(--mut);max-width:600px}
+  .lang{margin-left:auto;flex:none;display:flex;border:1px solid var(--line2);border-radius:9px;overflow:hidden;background:#fff}
+  .lang button{border:0;background:transparent;font:inherit;font-size:13px;font-weight:600;padding:6px 11px;cursor:pointer;color:var(--mut)}
+  .lang button.on{background:var(--ink);color:#fff}
+  .lang button:focus-visible{outline:3px solid #bfe0d9;outline-offset:-3px}
+
+  /* steps */
+  .step{margin-top:22px}
+  .step>h2{display:flex;align-items:center;gap:10px;margin:0 0 10px;font-size:17px;font-weight:700}
+  .step>h2 .num{width:26px;height:26px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;
+    font-size:13px;font-weight:700;flex:none}
+  .step>h2 .opt{font-weight:400;color:var(--mut);font-size:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow)}
+  .card+.card{margin-top:12px}
+  .zone{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+    border:2px dashed var(--line2);border-radius:12px;padding:22px 16px;text-align:center;cursor:pointer;
+    background:#fbfaf6;color:var(--ink);transition:border-color .15s,background .15s;font:inherit;width:100%}
+  .zone:hover,.zone.hot{border-color:var(--green);background:var(--green-soft)}
+  .zone:focus-visible{outline:3px solid var(--green);outline-offset:2px}
+  .zone .big{font-weight:600;font-size:15.5px}
+  .zone .small{color:var(--mut);font-size:13px}
+  .zonerow{display:grid;grid-template-columns:1.4fr 1fr;gap:12px}
+  @media (max-width:640px){.zonerow{grid-template-columns:1fr}}
+  .status{margin-top:12px;font-size:14px;color:var(--mut);display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
+  .status .ok{color:var(--green-ink);font-weight:600}
+  .status .bad{color:var(--red);font-weight:600}
+  .status .warn{color:var(--amber);font-weight:600}
+  .status .lnk{background:none;border:0;padding:0;font:inherit;color:var(--green-ink);text-decoration:underline;cursor:pointer;font-weight:600}
+  .pill{display:inline-flex;align-items:center;gap:6px;background:var(--paper);border:1px solid var(--line);
+    border-radius:20px;padding:3px 10px 3px 12px;font-size:13.5px}
+  .pill button{border:0;background:transparent;color:var(--dim);cursor:pointer;font-size:16px;line-height:1;padding:0 2px}
+  .pill button:hover{color:var(--red)}
+  .tables{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+
+  /* notices */
+  .notice{display:flex;gap:12px;align-items:flex-start;border-radius:12px;padding:14px 16px;font-size:14.5px;line-height:1.5}
+  .notice .ico{flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:14px}
+  .notice.good{background:var(--green-soft);color:var(--green-ink)}
+  .notice.good .ico{background:var(--green);color:#fff}
+  .notice.hmm{background:var(--amber-soft);color:#6b4300}
+  .notice.hmm .ico{background:var(--amber);color:#fff}
+  .notice.bad{background:var(--red-soft);color:#7a2a1c}
+  .notice.bad .ico{background:var(--red);color:#fff}
+  .notice.plain{background:var(--paper);color:var(--mut)}
+  .notice.plain .ico{background:var(--line2);color:#fff}
+  .notice p{margin:0}
+  .notice p+p{margin-top:6px}
+  .notice+.notice{margin-top:10px}
+
+  /* form bits */
+  .params{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px 18px}
+  .param label,.lbl{display:block;font-size:13px;font-weight:600;color:var(--mut);margin-bottom:5px}
+  select,input[type=text],input[type=number]{width:100%;background:#fff;color:var(--ink);
+    border:1px solid var(--line2);border-radius:9px;padding:9px 11px;font-size:14.5px;font-family:inherit}
+  select:focus,input:focus{outline:3px solid #bfe0d9;border-color:var(--green)}
+  .note{font-size:13px;color:var(--mut);margin-top:5px;line-height:1.45}
+  .checkline{display:flex;gap:9px;align-items:center;font-size:14.5px;font-weight:500;color:var(--ink);margin:0;cursor:pointer}
+  .checkline input{width:17px;height:17px;accent-color:var(--green);margin:0;flex:none}
+  .btn{background:#fff;border:1px solid var(--line2);color:var(--ink);border-radius:10px;padding:9px 14px;
+    font:inherit;font-weight:600;font-size:14.5px;cursor:pointer;transition:background .12s,border-color .12s}
+  .btn:hover{border-color:var(--green);background:var(--green-soft)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .btn-primary{background:var(--green);border-color:var(--green);color:#fff;padding:12px 26px;font-size:15.5px;border-radius:12px}
+  .btn-primary:hover{background:var(--green-ink);border-color:var(--green-ink)}
+  .btn-soft{background:var(--paper)}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  details.adv{margin-top:14px;border-top:1px dashed var(--line);padding-top:10px}
+  details.adv summary{cursor:pointer;color:var(--mut);font-size:13.5px;font-weight:600;list-style:none;display:flex;align-items:center;gap:6px}
+  details.adv summary::-webkit-details-marker{display:none}
+  details.adv summary::before{content:"";width:7px;height:7px;border-right:2px solid var(--dim);border-bottom:2px solid var(--dim);
+    transform:rotate(-45deg);transition:transform .15s;margin-left:2px}
+  details.adv[open] summary::before{transform:rotate(45deg)}
+  details.adv .params{margin-top:12px}
+
+  /* naming */
+  .tmpl{width:100%;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:14.5px;padding:11px 12px}
+  .chiplabel{font-size:13px;font-weight:600;color:var(--mut);margin:14px 0 6px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{background:#fff;border:1px solid var(--line2);color:var(--ink);border-radius:20px;padding:5px 12px;
+    font:inherit;font-size:13.5px;cursor:pointer;transition:all .12s}
+  .chip:hover{border-color:var(--green);background:var(--green-soft);color:var(--green-ink)}
+  .chip.built{background:var(--paper)}
+  .preview{margin-top:14px;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:12px 14px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;line-height:1.75;white-space:pre-wrap;word-break:break-all;color:var(--green-ink)}
+  .preview .dim{color:var(--dim);font-family:system-ui,sans-serif}
+  .presets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+  .presets .chip{border-radius:9px}
+
+  /* sequence table */
+  .tblwrap{max-height:230px;overflow:auto;border:1px solid var(--line);border-radius:10px;margin-top:12px}
+  table.rows{width:100%;border-collapse:collapse;font-size:13px}
+  table.rows th{position:sticky;top:0;background:var(--paper);text-align:left;color:var(--mut);font-weight:600;padding:7px 10px;border-bottom:1px solid var(--line)}
+  table.rows td{padding:6px 10px;border-bottom:1px solid #f0ece2;color:var(--ink)}
+  table.rows td.name{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
+  table.rows td.no{color:var(--red);font-weight:600}
+
+  /* gallery */
+  .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin-top:14px}
+  .shot{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff;cursor:pointer;transition:border-color .12s}
+  .shot:hover{border-color:var(--green)}
+  .shot.playing{border-color:var(--green);box-shadow:0 0 0 3px #bfe0d9}
+  .shot canvas{display:block;width:100%;height:auto;background:#fff}
+  .shot .cap{padding:7px 10px;font-size:12px;color:var(--mut);line-height:1.4;border-top:1px solid var(--line)}
+  .shot .cap b{color:var(--ink);display:block;word-break:break-all;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px;font-weight:500}
+  .shot .cap .err{color:var(--red)}
+  .legend{font-size:13px;color:var(--mut);margin-top:10px}
+  .legend i{display:inline-block;width:14px;height:10px;border:2px solid #e2762a;vertical-align:middle;margin-right:5px;border-radius:2px}
+
+  /* run */
+  .runbar{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:16px}
+  .bar{flex:1;min-width:140px;height:10px;background:var(--paper);border-radius:6px;overflow:hidden;border:1px solid var(--line)}
+  .bar i{display:block;height:100%;width:0;background:var(--green);transition:width .15s}
+  .runinfo{font-size:14px;color:var(--mut)}
+  .log{margin-top:12px;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:10px 12px;
+    font-size:13px;line-height:1.6;max-height:180px;overflow:auto;font-family:ui-monospace,Menlo,Consolas,monospace}
+  .log .err{color:var(--red)} .log .ok{color:var(--green-ink)}
+
+  /* how it works */
+  .howto{margin-top:34px;color:var(--mut);font-size:14px}
+  .howto h3{margin:0 0 6px;color:var(--ink);font-size:16px}
+  .howto details{border-top:1px solid var(--line);padding:10px 0}
+  .howto summary{cursor:pointer;font-weight:600;color:var(--ink);font-size:14.5px}
+  .howto p{margin:8px 0 0;line-height:1.55}
+  .howto ul{margin:8px 0 0;padding-left:20px;line-height:1.55}
+  .credit{margin-top:22px;font-size:12.5px;color:var(--dim)}
+
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;
+    border-radius:10px;padding:10px 18px;font-size:14px;z-index:40;box-shadow:0 8px 28px rgba(0,0,0,.2)}
+  #empty{margin-top:22px}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <div class="logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round">
+        <path d="M4 12h2M8 7v10M12 4v16M16 8v8M20 11v2"/></svg>
+    </div>
+    <div>
+      <h1>Clip Maker</h1>
+      <p data-t="tagline">Use this tool to make and name <b>.wav clips</b> for the annotations in your Raven selection tables.
+        Everything happens in your browser, on your own computer.</p>
+    </div>
+    <div class="lang" role="group" aria-label="Language">
+      <button type="button" id="lang-en" class="on">English</button>
+      <button type="button" id="lang-id">Bahasa Indonesia</button>
+    </div>
+  </header>
+
+  <div class="notice plain" id="embedded" hidden style="margin-bottom:18px"><span class="ico">i</span><div>
+    <p><span data-t="emb.p">You are using Clip Maker inside Claude, so the clips will arrive as one ZIP download. To save clips straight into folders on your computer, download Clip Maker as a file and open it in Chrome or Edge.</span>
+    <button type="button" class="lnk" id="btn-dl-self" style="background:none;border:0;padding:0;font:inherit;color:var(--green-ink);text-decoration:underline;cursor:pointer" data-t="emb.btn">Download Clip Maker (one file)</button></p>
+  </div></div>
+
+  <!-- 1 ---------------------------------------------------------------- -->
+  <section class="step">
+    <h2><span class="num">1</span><span data-t="s1.h">The selection table</span> <span class="opt" data-t="s1.opt">one or several</span></h2>
+    <label class="zone" id="z-tbl" tabindex="0">
+      <span class="big" data-t="s1.big">Drop your selection table here, or click to choose</span>
+      <span class="small" data-t="s1.small">Raven .txt tables, or .csv / .tsv &middot; add more than one and they are combined</span>
+      <input type="file" id="in-tbl" accept=".txt,.csv,.tsv" multiple class="visually-hidden">
+    </label>
+    <div class="tables" id="tbl-list"></div>
+    <div class="status" id="tbl-info"></div>
+  </section>
+
+  <!-- 2 ---------------------------------------------------------------- -->
+  <section class="step">
+    <h2><span class="num">2</span><span data-t="s2.h">The recordings</span> <span class="opt" data-t="s2.opt">WAV or FLAC</span></h2>
+    <div class="zonerow">
+      <button class="zone" id="z-dir" type="button">
+        <span class="big" data-t="s2.big">Choose the folder with the recordings</span>
+        <span class="small" data-t="s2.small">subfolders are included &middot; you can also drop a folder here</span>
+      </button>
+      <label class="zone" id="z-files" tabindex="0">
+        <span class="big" data-t="s2.big2">&hellip;or pick a few files</span>
+        <span class="small" data-t="s2.small2">drop them here</span>
+        <input type="file" id="in-files" multiple accept="audio/*,.wav,.WAV,.flac,.FLAC" class="visually-hidden">
+      </label>
+    </div>
+    <input type="file" id="in-dir" webkitdirectory multiple class="visually-hidden">
+    <div class="status" id="aud-info"></div>
+  </section>
+
+  <div class="card" id="empty">
+    <div style="color:var(--mut);line-height:1.6" data-t="empty">
+      <b style="color:var(--ink)">Start with steps 1 and 2.</b> Every selection in your table becomes one .wav file.
+      You will see how each sound is being found, choose what the clips are called, check a few spectrograms,
+      and then make the clips.
+    </div>
+  </div>
+
+  <!-- 3 ---------------------------------------------------------------- -->
+  <section class="step" id="step-cols" hidden>
+    <h2><span class="num">3</span><span data-t="s3.h">Finding each sound in the recordings</span></h2>
+    <div class="card">
+      <div id="locate"></div>
+      <div id="match-info" style="margin-top:10px"></div>
+
+      <details class="adv" id="adv-cols">
+        <summary data-t="s3.adv">Which columns are being used</summary>
+        <div class="params">
+          <div class="param">
+            <label for="c-file" data-t="s3.cfile">Recording the sound is in</label>
+            <select id="c-file"></select>
+            <div class="note" data-t="s3.cfile.n">Only the file name is used, not the path in it.</div>
+          </div>
+          <div class="param">
+            <label for="c-start" data-t="s3.cstart">Start of the sound</label>
+            <select id="c-start"></select>
+          </div>
+          <div class="param">
+            <label for="c-end" data-t="s3.cend">End of the sound</label>
+            <select id="c-end"></select>
+            <div class="note" data-t="s3.cend.n">Sets the clip length.</div>
+          </div>
+        </div>
+      </details>
+
+      <div id="seq-panel" hidden style="margin-top:14px">
+        <div class="params">
+          <div class="param">
+            <label for="seq-order" data-t="s3.order">Order the recordings were opened in Raven</label>
+            <select id="seq-order">
+              <option value="name" data-t="s3.order.name">file name (A to Z)</option>
+              <option value="stamp" data-t="s3.order.stamp">date and time in the file name</option>
+              <option value="mtime" data-t="s3.order.mtime">date modified</option>
+            </select>
+            <div class="note" data-t="s3.order.n">Raven stitches files together in the order they were opened. Almost always that is file-name order.</div>
+          </div>
+          <div class="param" style="grid-column:span 2;min-width:240px">
+            <span class="lbl" data-t="s3.timeline">The stitched-together timeline</span>
+            <div class="status" id="seq-info" style="margin-top:0"><span>&mdash;</span></div>
+          </div>
+        </div>
+        <div class="tblwrap" id="seq-wrap" hidden><table class="rows" id="seq-tbl"></table></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 ---------------------------------------------------------------- -->
+  <section class="step" id="step-which" hidden>
+    <h2><span class="num">4</span><span data-t="s4.h">Which selections to clip</span></h2>
+    <div class="card">
+      <div class="params">
+        <div class="param">
+          <label for="f-col" data-t="s4.by">Choose by</label>
+          <select id="f-col"></select>
+        </div>
+        <div class="param" id="wrap-fval" hidden>
+          <label for="f-val" data-t="s4.keep">Keep these values</label>
+          <select id="f-val" multiple size="6" style="height:auto"></select>
+          <div class="note" data-t="s4.keep.n">Hold Ctrl (Windows) or &#8984; (Mac) to pick several.</div>
+        </div>
+        <div class="param" id="wrap-fmin" hidden>
+          <label for="f-min"><span data-t="s4.min">Only when</span> <span id="f-min-name">confidence</span> <span data-t="s4.min2">is at least</span></label>
+          <input type="number" id="f-min" min="0" max="1" step="0.01" value="0">
+        </div>
+      </div>
+      <div class="status" id="sel-info"><span>&mdash;</span></div>
+    </div>
+  </section>
+
+  <!-- 5 ---------------------------------------------------------------- -->
+  <section class="step" id="step-name" hidden>
+    <h2><span class="num">5</span><span data-t="s5.h">Naming the clips</span></h2>
+    <div class="card">
+      <div class="presets" id="presets"></div>
+      <input type="text" id="tmpl" class="tmpl" value="{file}_{start}s_{dur}s" aria-label="Name pattern">
+      <div class="note" data-t="s5.n">Anything in {curly braces} is filled in for each clip. Click a word below to add it where your cursor is.
+        The suggested pattern is <b>class, recording, start time in the recording, length</b> &mdash; add other annotation columns (confidence, quality&hellip;) as they are useful.</div>
+      <p class="chiplabel" data-t="s5.about">About the sound</p>
+      <div class="chips" id="chips-built"></div>
+      <p class="chiplabel" data-t="s5.cols">Columns from your table</p>
+      <div class="chips" id="chips-cols"></div>
+      <div class="preview" id="preview"></div>
+      <div class="status" id="name-info"></div>
+
+      <div style="margin-top:16px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <label class="checkline"><input type="checkbox" id="opt-folder" checked> <span data-t="s5.folder">Put the clips in one folder per</span></label>
+        <select id="folder-col" style="width:auto;min-width:160px" aria-label="Folder column"></select>
+      </div>
+      <div class="note" id="n-folder" style="margin-top:6px">&nbsp;</div>
+
+      <details class="adv">
+        <summary data-t="s5.adv">Advanced naming settings</summary>
+        <div class="params">
+          <div class="param">
+            <label for="opt-dec" data-t="s5.dec">Decimal places on times</label>
+            <select id="opt-dec">
+              <option value="0" data-t="s5.dec0">none &mdash; 714</option>
+              <option value="1">1 &mdash; 714.0</option>
+              <option value="2" selected>2 &mdash; 714.00</option>
+              <option value="3">3 &mdash; 714.000</option>
+            </select>
+            <div class="note" data-t="s5.dec.n">Two is enough to keep names unique and accurate. Fewer and two sounds close together can end up with the same name.</div>
+          </div>
+          <div class="param">
+            <label for="opt-pad" data-t="s5.pad">Zero-pad the counter</label>
+            <select id="opt-pad">
+              <option value="0" data-t="s5.pad0">none &mdash; 7</option>
+              <option value="3" selected data-t="s5.pad3">3 digits &mdash; 007</option>
+              <option value="4" data-t="s5.pad4">4 digits &mdash; 0007</option>
+              <option value="5" data-t="s5.pad5">5 digits &mdash; 00007</option>
+            </select>
+            <div class="note" data-t="s5.pad.n">So the clips sort in order in a file browser.</div>
+          </div>
+          <div class="param">
+            <span class="lbl" data-t="s5.tidy">Tidy up</span>
+            <label class="checkline"><input type="checkbox" id="opt-spaces" checked> <span data-t="s5.spaces">Spaces become underscores</span></label>
+          </div>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <!-- 6 ---------------------------------------------------------------- -->
+  <section class="step" id="step-check" hidden>
+    <h2><span class="num">6</span><span data-t="s6.h">Check a few before you make them all</span> <span class="opt" data-t="s6.opt">optional</span></h2>
+    <div class="card">
+      <div class="row">
+        <button class="btn" id="btn-gal" type="button" data-t="s6.show">Show me 12 clips</button>
+        <button class="btn btn-soft" id="btn-gal-more" type="button" hidden data-t="s6.more">Next 12</button>
+        <span class="runinfo" data-t="s6.from">from</span>
+        <select id="gal-class" style="width:auto;min-width:150px" aria-label="Which class to look at"></select>
+        <span class="runinfo" id="gal-info"></span>
+      </div>
+      <div class="gallery" id="gallery"></div>
+      <div class="legend" id="gal-legend" hidden><i></i> <span data-t="s6.legend">the selection from your table &middot; click a spectrogram to hear it.
+        If the boxes sit on the sounds, the times are being read correctly.</span></div>
+    </div>
+  </section>
+
+  <!-- 7 ---------------------------------------------------------------- -->
+  <section class="step" id="step-out" hidden>
+    <h2><span class="num">7</span><span data-t="s7.h">Make the clips</span></h2>
+    <div class="card">
+      <div class="row">
+        <button class="btn" id="btn-out" type="button" data-t="s7.where">Choose where to save them</button>
+        <span class="runinfo" id="out-info"></span>
+      </div>
+      <label class="checkline" style="margin-top:14px;align-items:flex-start"><input type="checkbox" id="opt-manifest" checked style="margin-top:3px">
+        <span data-t="s7.manifest">Also save <span class="mono">clips.csv</span> and <span class="mono">README.txt</span> &mdash; a list of every clip with its source recording, times and all the columns from your table, and a note of the settings used</span></label>
+      <details class="adv">
+        <summary data-t="s7.adv">Advanced clip settings</summary>
+        <div class="params">
+          <div class="param">
+            <label for="opt-before" data-t="s7.before">Seconds of context before each sound</label>
+            <input type="number" id="opt-before" min="0" max="60" step="0.1" value="0">
+          </div>
+          <div class="param">
+            <label for="opt-after" data-t="s7.after">Seconds of context after</label>
+            <input type="number" id="opt-after" min="0" max="60" step="0.1" value="0">
+          </div>
+          <div class="param">
+            <label for="opt-fixed" data-t="s7.fixed">Make every clip the same length (s)</label>
+            <input type="number" id="opt-fixed" min="0" max="600" step="0.1" value="0">
+            <div class="note" data-t="s7.fixed.n">0 keeps each selection's own length. Otherwise shorter sounds are centred in a clip of this length, and longer selections are split into back-to-back segments of this length (<span class="mono">_p1</span>, <span class="mono">_p2</span> &hellip;). Context padding is added on top.</div>
+          </div>
+          <div class="param">
+            <label for="opt-sr" data-t="s7.sr">Sample rate</label>
+            <select id="opt-sr">
+              <option value="0" selected data-t="s7.sr0">keep the recording's</option>
+              <option value="8000">8 kHz</option>
+              <option value="16000">16 kHz</option>
+              <option value="22050">22.05 kHz</option>
+              <option value="32000">32 kHz</option>
+              <option value="44100">44.1 kHz</option>
+              <option value="48000">48 kHz</option>
+              <option value="96000">96 kHz</option>
+            </select>
+            <div class="note" data-t="s7.sr.n">Left alone, a WAV clip keeps the recording's exact samples. Resampling is useful when clips are headed for a model that expects one rate.</div>
+          </div>
+        </div>
+      </details>
+      <div class="runbar">
+        <button class="btn btn-primary" id="btn-run" disabled data-t="s7.run">Make the clips</button>
+        <div class="bar"><i id="bar"></i></div>
+        <span class="runinfo" id="run-info"></span>
+      </div>
+      <div class="log" id="log" hidden></div>
+    </div>
+  </section>
+
+  <!-- how it works -------------------------------------------------------- -->
+  <section class="howto">
+    <h3 data-t="how.h">How it works</h3>
+    <details>
+      <summary data-t="how.1.s">Your recordings never leave your computer</summary>
+      <p data-t="how.1.p">This page has no server. When you choose a folder, the browser is given permission to <i>read</i> those files, and Clip Maker
+        reads only the few seconds it needs for each clip. Nothing is uploaded or copied. The clips are written straight to the
+        folder you pick in step 7.</p>
+    </details>
+    <details>
+      <summary data-t="how.2.s">Which browsers can work with folders</summary>
+      <div data-t="how.2.p"><p><b>Chrome, Edge, Opera, Arc and Brave</b> can open a whole folder of recordings, including its subfolders, with one permission
+        prompt, and can write clips straight into a folder you choose.</p>
+      <p><b>Safari and Firefox</b> can also open a folder, but cannot write into one. In those browsers the clips come down as a
+        single ZIP download. That is fine for a few hundred clips and slow for thousands.</p></div>
+    </details>
+    <details>
+      <summary data-t="how.3.s">How Raven records time, and why that matters</summary>
+      <div data-t="how.3.p"><p>A Raven selection table starts out with just Begin Time, End Time, Low Frequency, High Frequency and your annotation columns.
+        When you open <b>more than one file</b> in Raven, it stitches them into one long timeline, so Begin Time is measured from the
+        start of the <i>first</i> file that was open, not the start of the file the sound is actually in.</p>
+      <p>Raven can add <b>Begin File</b>, <b>Begin Path</b> and <b>File Offset</b> columns (in the selection table's column settings).
+        File Offset says how far into its own file each sound is, which is exactly what is needed to cut a clip. Many tables have
+        them; many don't.</p>
+      <ul>
+        <li><b>With File Offset</b> &mdash; each sound is located directly. Nothing to work out.</li>
+        <li><b>Without it</b> &mdash; Clip Maker lines up your recordings in the order Raven opened them, adds up their lengths, and
+          works out which file each Begin Time lands in. This only works if the folder holds exactly the files that were open in
+          Raven. If the table also has Begin File, that column is used to double-check the answer.</li>
+      </ul>
+      <p>A selection that runs past the end of its recording is joined with the start of the next recording in the sequence, so the clip is complete.</p></div>
+    </details>
+    <details>
+      <summary data-t="how.4.s">Several tables, and recordings with the same name</summary>
+      <div data-t="how.4.p"><p>Drop several tables in step 1 and their rows are combined. A <span class="mono">{table}</span> name part is available so
+        clips can carry the name of the table they came from. Each table is located independently, so one can have File Offset and
+        another not.</p>
+      <p>If two recordings in different subfolders share a file name (common when several sites use the same recorder schedule),
+        Clip Maker uses the table's <b>Begin Path</b> column to tell them apart. Without that column it takes the first match and warns you.</p></div>
+    </details>
+    <details>
+      <summary data-t="how.5.s">What is remembered between visits</summary>
+      <div data-t="how.5.p"><p>Your naming pattern, settings and language are kept in this browser, and so are the last recordings folder and output folder, so
+        the next table takes two clicks. Nothing is sent anywhere. <button type="button" class="lnk" id="btn-forget" style="background:none;border:0;padding:0;font:inherit;color:var(--green-ink);text-decoration:underline;cursor:pointer">Forget everything</button> clears it.</p></div>
+    </details>
+    <details>
+      <summary data-t="how.6.s">About the code</summary>
+      <div data-t="how.6.p"><p>Clip Maker is one self-contained web page: HTML for the layout, CSS for the look, and <b>JavaScript</b> for everything it does.
+        There is no server, no install, no library and no internet connection needed &mdash; the file works from a hard drive, a USB stick, a shared folder or a website.</p>
+      <ul>
+        <li>It reads WAV and FLAC headers itself and copies only the bytes a clip needs, so cutting a WAV is exact and fast.</li>
+        <li>FLAC is decoded by the browser's own audio engine (the Web Audio API), which also handles resampling.</li>
+        <li>Folder access and saving use the browser's File System Access API; where that is missing, a ZIP is built in the page.</li>
+        <li>Spectrograms are a short-time Fourier transform drawn on a canvas element.</li>
+      </ul>
+      <p>The code was written by Claude, an AI model made by Anthropic, and was designed, specified and customised by
+        Benjamin Gottesman (K. Lisa Yang Center for Conservation Bioacoustics, Cornell Lab of Ornithology) for the people who work
+        with Raven selection tables every day. The source is readable in any text editor &mdash; it is meant to be changed.</p></div>
+    </details>
+    <details>
+      <summary data-t="how.7.s">The clips.csv list and README</summary>
+      <p data-t="how.7.p">One row per clip: the clip's file name and folder, the recording it was cut from, where in that recording it starts and
+        ends, the table it came from, and every column of the original selection. It is the record of what was made, and it is
+        the file to hand to a script or a model later. README.txt beside it records which tables, which settings and which version made the clips.</p>
+    </details>
+    <p class="credit" data-t="credit">Clip Maker v2.1 &middot; designed by Benjamin Gottesman &middot; built with Claude</p>
+  </section>
+
+</div>
+
+<script>
+(function(){
+"use strict";
+var VERSION="2.1";
+var $=function(id){ return document.getElementById(id); };
+function esc(t){ return String(t).replace(/[&<>"]/g,function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]; }); }
+function baseName(p){ if(!p) return ""; var s=String(p).split(/[\\/]/); return s[s.length-1]; }
+function dirName(p){ var s=String(p||"").split(/[\\/]/); s.pop(); return s.join("/"); }
+function stem(n){ return String(n).replace(/\.[^.]+$/,""); }
+function fmtS(x){ return (Math.round(x*100)/100).toString(); }
+var toastT=null;
+function toast(m){
+  var t=$("toast");
+  if(!t){ t=document.createElement("div"); t.id="toast"; t.className="toast"; document.body.appendChild(t); }
+  t.textContent=m; t.hidden=false;
+  clearTimeout(toastT); toastT=setTimeout(function(){ t.hidden=true; },2200);
+}
+
+/* ================= language ================= */
+var LANG="en", EN={};
+var ID={
+  tagline:"Gunakan alat ini untuk membuat dan menamai <b>klip .wav</b> dari anotasi di tabel seleksi Raven Anda. Semua proses berjalan di browser, di komputer Anda sendiri.",
+  "s1.h":"Tabel seleksi","s1.opt":"satu atau beberapa",
+  "s1.big":"Seret tabel seleksi ke sini, atau klik untuk memilih",
+  "s1.small":"Tabel Raven .txt, atau .csv / .tsv &middot; bisa lebih dari satu, akan digabungkan",
+  "s2.h":"Rekaman","s2.opt":"WAV atau FLAC",
+  "s2.big":"Pilih folder berisi rekaman","s2.small":"termasuk subfolder &middot; folder juga bisa diseret ke sini",
+  "s2.big2":"&hellip;atau pilih beberapa file","s2.small2":"seret ke sini",
+  empty:"<b style=\"color:var(--ink)\">Mulai dari langkah 1 dan 2.</b> Setiap seleksi di tabel Anda menjadi satu file .wav. Anda akan melihat bagaimana setiap suara ditemukan, menentukan nama klip, memeriksa beberapa spektrogram, lalu membuat klipnya.",
+  "s3.h":"Menemukan setiap suara di dalam rekaman",
+  "s3.adv":"Kolom yang digunakan","s3.cfile":"Rekaman tempat suara berada","s3.cfile.n":"Hanya nama file yang dipakai, bukan path-nya.",
+  "s3.cstart":"Awal suara","s3.cend":"Akhir suara","s3.cend.n":"Menentukan panjang klip.",
+  "s3.order":"Urutan rekaman saat dibuka di Raven","s3.order.name":"nama file (A ke Z)","s3.order.stamp":"tanggal dan waktu di nama file","s3.order.mtime":"tanggal diubah",
+  "s3.order.n":"Raven menyambung file sesuai urutan saat dibuka. Hampir selalu itu urutan nama file.",
+  "s3.timeline":"Garis waktu gabungan",
+  "s4.h":"Seleksi mana yang akan dipotong","s4.by":"Pilih berdasarkan","s4.keep":"Sertakan nilai ini",
+  "s4.keep.n":"Tahan Ctrl (Windows) atau &#8984; (Mac) untuk memilih beberapa.","s4.min":"Hanya jika","s4.min2":"minimal",
+  "s5.h":"Penamaan klip",
+  "s5.n":"Semua yang ada di dalam {kurung kurawal} akan diisi untuk setiap klip. Klik kata di bawah untuk menambahkannya di posisi kursor. Pola yang disarankan: <b>kelas, rekaman, waktu mulai di dalam rekaman, panjang</b> &mdash; tambahkan kolom anotasi lain (confidence, kualitas&hellip;) bila berguna.",
+  "s5.about":"Tentang suara","s5.cols":"Kolom dari tabel Anda","s5.folder":"Masukkan klip ke satu folder per",
+  "s5.adv":"Pengaturan penamaan lanjutan","s5.dec":"Jumlah desimal pada waktu","s5.dec0":"tanpa desimal &mdash; 714",
+  "s5.dec.n":"Dua sudah cukup agar nama unik dan akurat. Jika lebih sedikit, dua suara yang berdekatan bisa mendapat nama yang sama.",
+  "s5.pad":"Tambahkan nol di depan nomor urut","s5.pad0":"tanpa nol &mdash; 7","s5.pad3":"3 digit &mdash; 007","s5.pad4":"4 digit &mdash; 0007","s5.pad5":"5 digit &mdash; 00007",
+  "s5.pad.n":"Agar klip terurut rapi di penjelajah file.","s5.tidy":"Rapikan","s5.spaces":"Spasi menjadi garis bawah",
+  "s6.h":"Periksa beberapa sebelum membuat semuanya","s6.opt":"opsional","s6.show":"Tampilkan 12 klip","s6.more":"12 berikutnya","s6.from":"dari",
+  "s6.legend":"seleksi dari tabel Anda &middot; klik spektrogram untuk mendengarnya. Jika kotaknya tepat di atas suara, waktunya terbaca dengan benar.",
+  "s7.h":"Buat klip","s7.where":"Pilih tempat menyimpan",
+  "s7.manifest":"Simpan juga <span class=\"mono\">clips.csv</span> dan <span class=\"mono\">README.txt</span> &mdash; daftar semua klip beserta rekaman asal, waktu dan semua kolom dari tabel Anda, serta catatan pengaturan yang dipakai",
+  "s7.adv":"Pengaturan klip lanjutan","s7.before":"Detik konteks sebelum setiap suara","s7.after":"Detik konteks sesudahnya",
+  "s7.fixed":"Samakan panjang semua klip (detik)",
+  "s7.fixed.n":"0 mempertahankan panjang asli setiap seleksi. Jika diisi, suara yang lebih pendek diletakkan di tengah klip sepanjang ini, dan seleksi yang lebih panjang dibagi menjadi potongan berurutan sepanjang ini (<span class=\"mono\">_p1</span>, <span class=\"mono\">_p2</span> &hellip;). Konteks ditambahkan di luarnya.",
+  "s7.sr":"Laju sampel (sample rate)","s7.sr0":"sama dengan rekaman",
+  "s7.sr.n":"Jika dibiarkan, klip WAV mempertahankan sampel asli rekaman. Mengubah laju sampel berguna bila klip akan dipakai model yang memerlukan satu laju tertentu.",
+  "s7.run":"Buat klip",
+  "how.h":"Cara kerjanya",
+  "how.1.s":"Rekaman Anda tidak pernah meninggalkan komputer Anda",
+  "how.1.p":"Halaman ini tidak punya server. Saat Anda memilih folder, browser diberi izin untuk <i>membaca</i> file-file itu, dan Clip Maker hanya membaca beberapa detik yang dibutuhkan untuk setiap klip. Tidak ada yang diunggah atau disalin. Klip ditulis langsung ke folder yang Anda pilih di langkah 7.",
+  "how.2.s":"Browser mana yang bisa bekerja dengan folder",
+  "how.2.p":"<p><b>Chrome, Edge, Opera, Arc dan Brave</b> bisa membuka satu folder rekaman utuh, termasuk subfoldernya, dengan satu kali izin, dan bisa menulis klip langsung ke folder pilihan Anda.</p><p><b>Safari dan Firefox</b> juga bisa membuka folder, tetapi tidak bisa menulis ke dalamnya. Di browser itu klip diunduh sebagai satu file ZIP. Itu tidak masalah untuk beberapa ratus klip, tetapi lambat untuk ribuan.</p>",
+  "how.3.s":"Cara Raven mencatat waktu, dan mengapa itu penting",
+  "how.3.p":"<p>Tabel seleksi Raven awalnya hanya berisi Begin Time, End Time, Low Frequency, High Frequency dan kolom anotasi Anda. Saat Anda membuka <b>lebih dari satu file</b> di Raven, file-file itu disambung menjadi satu garis waktu panjang, sehingga Begin Time dihitung dari awal file <i>pertama</i> yang dibuka, bukan dari awal file tempat suara itu sebenarnya berada.</p><p>Raven bisa menambahkan kolom <b>Begin File</b>, <b>Begin Path</b> dan <b>File Offset</b> (di pengaturan kolom tabel seleksi). File Offset menyatakan seberapa jauh suara berada di dalam filenya sendiri, dan itulah yang dibutuhkan untuk memotong klip. Banyak tabel memilikinya; banyak juga yang tidak.</p><ul><li><b>Dengan File Offset</b> &mdash; setiap suara langsung ditemukan. Tidak ada yang perlu dihitung.</li><li><b>Tanpa File Offset</b> &mdash; Clip Maker mengurutkan rekaman Anda sesuai urutan Raven membukanya, menjumlahkan panjangnya, dan menghitung di file mana setiap Begin Time jatuh. Ini hanya benar jika folder berisi persis file-file yang dibuka di Raven. Jika tabel juga memiliki Begin File, kolom itu dipakai untuk memeriksa ulang hasilnya.</li></ul><p>Seleksi yang melewati akhir rekamannya disambung dengan awal rekaman berikutnya dalam urutan, sehingga klipnya utuh.</p>",
+  "how.4.s":"Beberapa tabel, dan rekaman dengan nama yang sama",
+  "how.4.p":"<p>Seret beberapa tabel di langkah 1 dan barisnya digabungkan. Ada bagian nama <span class=\"mono\">{table}</span> agar klip bisa membawa nama tabel asalnya. Setiap tabel dilokalisasi secara terpisah, jadi satu tabel boleh punya File Offset dan yang lain tidak.</p><p>Jika dua rekaman di subfolder berbeda memiliki nama file yang sama (umum terjadi bila beberapa lokasi memakai jadwal perekam yang sama), Clip Maker memakai kolom <b>Begin Path</b> di tabel untuk membedakannya. Tanpa kolom itu, yang pertama ditemukan yang dipakai, dan Anda akan diberi peringatan.</p>",
+  "how.5.s":"Apa yang diingat antar kunjungan",
+  "how.5.p":"<p>Pola nama, pengaturan dan bahasa Anda disimpan di browser ini, begitu pula folder rekaman dan folder keluaran terakhir, sehingga tabel berikutnya cukup dua klik. Tidak ada yang dikirim ke mana pun. <button type=\"button\" id=\"btn-forget\" style=\"background:none;border:0;padding:0;font:inherit;color:var(--green-ink);text-decoration:underline;cursor:pointer\">Lupakan semuanya</button> untuk menghapusnya.</p>",
+  "how.6.s":"Tentang kodenya",
+  "how.6.p":"<p>Clip Maker adalah satu halaman web mandiri: HTML untuk tata letak, CSS untuk tampilan, dan <b>JavaScript</b> untuk semua fungsinya. Tidak perlu server, instalasi, pustaka, maupun koneksi internet &mdash; file ini bisa dijalankan dari hard disk, flash disk, folder bersama, atau situs web.</p><ul><li>Ia membaca header WAV dan FLAC sendiri dan hanya menyalin byte yang dibutuhkan klip, sehingga pemotongan WAV akurat dan cepat.</li><li>FLAC didekode oleh mesin audio browser sendiri (Web Audio API), yang juga menangani pengubahan laju sampel.</li><li>Akses folder dan penyimpanan memakai File System Access API browser; jika tidak tersedia, file ZIP dibuat di halaman.</li><li>Spektrogram adalah transformasi Fourier waktu-singkat yang digambar pada elemen canvas.</li></ul><p>Kode ini ditulis oleh Claude, model AI buatan Anthropic, dan dirancang, dispesifikasikan serta disesuaikan oleh Benjamin Gottesman (K. Lisa Yang Center for Conservation Bioacoustics, Cornell Lab of Ornithology) untuk orang-orang yang bekerja dengan tabel seleksi Raven setiap hari. Kode sumbernya bisa dibaca di penyunting teks apa pun &mdash; memang dimaksudkan untuk diubah.</p>",
+  "how.7.s":"Daftar clips.csv dan README",
+  "how.7.p":"Satu baris per klip: nama file dan folder klip, rekaman asalnya, posisi awal dan akhir di dalam rekaman itu, tabel asalnya, dan setiap kolom dari seleksi aslinya. Ini adalah catatan apa yang telah dibuat, dan file inilah yang nanti diberikan ke skrip atau model. README.txt di sebelahnya mencatat tabel, pengaturan dan versi yang membuat klip-klip itu.",
+  "emb.p":"Anda memakai Clip Maker di dalam Claude, jadi klip akan diunduh sebagai satu file ZIP. Untuk menyimpan klip langsung ke folder di komputer Anda, unduh Clip Maker sebagai file dan buka di Chrome atau Edge.",
+  "emb.btn":"Unduh Clip Maker (satu file)","d.dlfail":"unduhan tidak jadi disimpan","d.selfdl":"Buka file yang terunduh di Chrome atau Edge",
+  credit:"Clip Maker v2.1 &middot; dirancang oleh Benjamin Gottesman &middot; dibuat bersama Claude",
+  /* dynamic strings */
+  "d.notable":"Belum ada tabel yang dimuat.","d.noaudio":"Belum ada rekaman yang dihubungkan.",
+  "d.rows":"baris","d.tables":"{k} tabel, ","d.selections":"<b>{n}</b> seleksi &middot; <b>{c}</b> kolom",
+  "d.remove":"hapus {name}","d.norows":"{name} tidak punya baris di bawah judul kolomnya",
+  "d.recfound":"<b>{n}</b> rekaman ditemukan","d.looking":"memeriksa <b>{name}</b>&hellip;",
+  "d.dups":"<b>{n}</b> nama file muncul lebih dari sekali (di subfolder berbeda). {hint}",
+  "d.dups.path":"Kolom <b>{col}</b> di tabel dipakai untuk membedakannya.",
+  "d.dups.nopath":"Tabel tidak punya kolom Begin Path, jadi yang pertama ditemukan yang dipakai.",
+  "d.lasttime":"Terakhir: <b>{name}</b>","d.useagain":"pakai lagi","d.noperm":"izin folder tidak diberikan",
+  "d.nowavflac":"tidak ada file WAV atau FLAC di pilihan itu","d.nofolder":"tidak bisa membuka folder itu",
+  "d.nofolderaccess":"browser ini tidak bisa menulis ke folder — Anda akan mendapat unduhan ZIP",
+  "d.saveinto":"Menyimpan ke <b>{name}</b>","d.nofolderyet":"Belum ada folder dipilih &mdash; klip akan diunduh sebagai satu file ZIP.",
+  "d.readlen":"membaca panjang rekaman&hellip;",
+  "d.seqinfo":"<b>{n}</b> rekaman &middot; <b>{len}</b> dari awal sampai akhir &middot; tabel mencapai <b>{max} s</b>",
+  "d.seq.out":"{n} seleksi jatuh melewati akhir","d.seq.ok":"semua seleksi jatuh di dalam rekaman &#10003;",
+  "d.seq.cross":"{n} melewati batas file (akan disambung dengan rekaman berikutnya)",
+  "d.th":"<th>#</th><th>rekaman</th><th>mulai pada</th><th>panjang</th><th>seleksi</th>","d.unreadable":"tidak terbaca",
+  "d.hours":"{h} jam","d.minutes":"{m} menit","d.seconds":"{s} detik","d.aminute":"satu menit",
+  "d.step2first":"Hubungkan rekaman di langkah 2, dan langkah ini akan menunjukkan bagaimana setiap suara akan ditemukan.",
+  "d.direct":"Tabel Anda memiliki <b>{f}</b> dan <b>{o}</b>, jadi setiap seleksi menyatakan persis di rekaman mana ia berada dan seberapa jauh suaranya dimulai. Tidak ada yang perlu dihitung.",
+  "d.using":"Memakai <b>{f}</b> untuk menemukan rekaman dan <b>{s}</b> sebagai waktu di dalamnya.",
+  "d.deep":"Banyak waktu mulai lebih dari satu jam, yang tampak seperti jam gabungan Raven, bukan waktu di dalam satu file. Jika rekaman ini lebih pendek dari itu, buka “Kolom yang digunakan” dan pilih opsi garis waktu gabungan.",
+  "d.mixed":"<b>{n}</b> seleksi (dari tabel tanpa kolom tersebut) akan ditemukan lewat garis waktu gabungan di bawah, memakai Begin Time.",
+  "d.mixed.out":"<b>{n}</b> di antaranya jatuh melewati akhir rekaman terakhir.",
+  "d.allfound":"Semua <b>{n}</b> rekaman yang disebut di tabel ditemukan di <b>{src}</b>.",
+  "d.yourfiles":"file Anda",
+  "d.somefound":"<b>{f}</b> dari <b>{n}</b> rekaman yang disebut di tabel ditemukan. <b>{r}</b> seleksi akan dilewati.",
+  "d.notfound":"Tidak ditemukan: <span class=\"mono\">{list}</span>{more}. Pastikan folder di langkah 2 berisi file-file ini (namanya harus sama).",
+  "d.andmore":" dan {n} lagi","d.checking":"memeriksa rekaman…",
+  "d.tl.nooff":"Tabel Anda tidak punya kolom <b>File Offset</b>. Waktunya berjalan pada satu jam Raven yang melintasi semua file yang dibuka bersama, jadi Begin Time 5.000 s bukan berarti 5.000 s di dalam satu file tertentu. ",
+  "d.tl.offonly":"Tabel Anda punya kolom File Offset tetapi tidak ada kolom yang menyebut nama rekaman, jadi ",
+  "d.tl.how":"Clip Maker mengurutkan rekaman Anda sesuai urutan di bawah, menjumlahkan panjangnya, dan menghitung di rekaman mana setiap seleksi jatuh.",
+  "d.tl.cond":"Ini hanya benar jika folder berisi <b>persis file-file yang dibuka di Raven</b> — tidak ada tambahan, tidak ada yang hilang.",
+  "d.tl.bf":" Tabel Anda juga punya <b>{col}</b>, yang dipakai untuk memeriksa ulang hasilnya.",
+  "d.tl.agree":"Diperiksa terhadap <b>{col}</b>: semua <b>{n}</b> seleksi jatuh di rekaman yang disebut tabel. Garis waktunya benar.",
+  "d.tl.disagree":"<b>{d}</b> dari {n} seleksi jatuh di rekaman yang berbeda dari yang disebut di <b>{col}</b>. Raven kemungkinan membuka kumpulan file yang berbeda.",
+  "d.tl.disagree2":"Coba urutan lain di atas, atau pastikan folder berisi persis file-file yang dibuka di Raven. Jika tabel punya kolom File Offset, pakai itu (buka “Kolom yang digunakan”).",
+  "d.tl.out":"<b>{n}</b> seleksi jatuh melewati akhir rekaman terakhir. Beberapa file yang dibuka di Raven kemungkinan tidak ada di folder ini.",
+  "d.tl.good":"Semua seleksi jatuh di dalam rekaman. Gunakan langkah 6 untuk melihat beberapa dan memastikan suaranya berada tepat di dalam kotak.",
+  "d.chip.file":"rekaman","d.chip.start":"mulai","d.chip.end":"akhir","d.chip.dur":"panjang","d.chip.table":"tabel","d.chip.n":"no. baris","d.chip.i":"nomor urut",
+  "d.tip.file":"nama rekaman, tanpa ekstensi","d.tip.start":"awal di dalam rekaman itu, detik","d.tip.end":"akhir di dalam rekaman itu","d.tip.dur":"panjang dalam detik",
+  "d.tip.table":"nama tabel seleksi","d.tip.n":"nomor baris di tabel","d.tip.i":"1, 2, 3 … sesuai urutan klip dibuat",
+  "d.preset.0":"Kelas + rekaman + mulai + panjang","d.preset.1":"Kelas + rekaman + mulai","d.preset.2":"Rekaman + mulai + akhir","d.preset.3":"Kelas + nomor urut","d.preset.4":"Tabel + baris",
+  "d.everyrow":"&mdash; potong semua baris &mdash;","d.values":"{n} nilai berbeda","d.blank":"(kosong)",
+  "d.nomatch":"Tidak ada seleksi yang cocok dengan pilihan di langkah 4.","d.andmoreclips":"…dan {n} lagi",
+  "d.unique":"semua nama unik &#10003;",
+  "d.dupnames":"<span class='warn'>{n} nama akan berulang</span> — akan diberi _2, _3 … Tambahkan <b>nomor urut</b> ke pola untuk menghindarinya.",
+  "d.willclip":"<b>{n}</b> dari {m} seleksi akan dipotong","d.intoclips":" menjadi <b>{k}</b> klip","d.audio":" &middot; sekitar <b>{x}</b> audio","d.roughly":" &middot; kira-kira <b>{s}</b>","d.under1mb":"kurang dari 1 MB",
+  "d.folder.on":"Satu subfolder untuk setiap nilai berbeda di kolom itu. Berguna untuk data latih dan menelusuri per spesies.","d.folder.off":"Semua klip masuk ke satu folder.",
+  "d.anyclass":"semua kelas","d.noclass":"tidak ada seleksi kelas itu yang cocok dengan langkah 4","d.again":"Ulangi dari awal",
+  "d.clipsof":"klip {a}–{b} dari {n}","d.part":"bagian {p} dari {n}","d.reading":"membaca…",
+  "d.recnotfound":"rekaman tidak ditemukan","d.noheader":"header tidak terbaca","d.emptyclip":"klip kosong — waktunya melewati akhir rekaman","d.cantread":"klip ini tidak terbaca",
+  "d.cantplay":"klip tidak bisa diputar",
+  "d.made":"dibuat","d.skipped":"dilewati","d.zipready":"ZIP siap — {n} file","d.done":"Selesai. {ok} klip dibuat{skip}.","d.doneskip":", {n} dilewati",
+  "d.joined":"{n} klip disambung melewati batas file","d.clipsmade":"{n} klip dibuat","d.csvwritten":"clips.csv dan README.txt ditulis","d.csvfail":"clips.csv tidak bisa ditulis",
+  "d.norec":"tidak ada rekaman bernama {name}","d.noheader2":"header {name} tidak terbaka","d.startspast":"{nm} dimulai {a} s di dalam rekaman sepanjang {b} s","d.nodecode":"bagian itu dari {name} tidak bisa didekode",
+  "d.forgot":"Pengaturan dan folder yang diingat sudah dihapus"
+};
+function t(key, en, vars){
+  var s=(LANG==="id" && ID[key]) ? ID[key] : en;
+  if(vars) s=s.replace(/\{(\w+)\}/g, function(m,k){ return (k in vars) ? vars[k] : m; });
+  return s;
+}
+function applyLang(){
+  document.documentElement.lang=LANG;
+  Array.prototype.forEach.call(document.querySelectorAll("[data-t]"), function(el){
+    var k=el.getAttribute("data-t");
+    if(!(k in EN)) EN[k]=el.innerHTML;
+    el.innerHTML=(LANG==="id" && ID[k]) ? ID[k] : EN[k];
+  });
+  $("lang-en").classList.toggle("on", LANG==="en");
+  $("lang-id").classList.toggle("on", LANG==="id");
+  var f=$("btn-forget"); if(f) f.onclick=forgetAll;
+  $("gal-class").firstChild && ($("gal-class").firstChild.textContent=t("d.anyclass","any class"));
+}
+function setLang(l){
+  LANG=l; applyLang(); saveSettings();
+  renderTableList(); renderAudioInfo(); renderOutInfo();
+  if(TBL){ buildChips(); buildFilters(true); buildFolderCol(true); buildGalClass(); galleryReset(); }
+  refresh();
+}
+
+/* ================= where are we running? =================
+   Inside Claude (or any other page's frame) the browser blocks folder pickers and direct downloads,
+   so we use the plain folder input and hand files to Claude's download capability instead. */
+var EMBEDDED=(function(){ try{ return window.self!==window.top; }catch(e){ return true; } })();
+var DL=null;
+if(window.claude && typeof window.claude.use==="function"){
+  try{ window.claude.use("downloads").then(function(d){ DL=d||null; }, function(){}); }catch(e){}
+}
+function canPickFolders(){ return !!window.showDirectoryPicker && !EMBEDDED; }
+function deliverBlob(name, blob){
+  if(DL){
+    return DL.save({filename:name, data:blob}).then(function(){ return true; }, function(e){
+      if(!e || e.code!=="declined") toast(t("d.dlfail","the download was not saved"));
+      return false;
+    });
+  }
+  var a=document.createElement("a");
+  a.href=URL.createObjectURL(blob); a.download=name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); },4000);
+  return Promise.resolve(true);
+}
+function downloadSelf(){
+  var own=fetch(location.href, {cache:"no-store"}).then(function(r){ if(!r.ok) throw 0; return r.text(); })
+    .catch(function(){ return "<!DOCTYPE html>\n"+document.documentElement.outerHTML; });
+  own.then(function(html){
+    return deliverBlob("clip-maker.html", new Blob([html],{type:"text/html"}));
+  }).then(function(ok){ if(ok) toast(t("d.selfdl","Open the downloaded file in Chrome or Edge")); });
+}
+
+/* ================= remembered settings ================= */
+var SKEY="clipmaker.settings.v2";
+var SETTING_IDS=["opt-dec","opt-pad","opt-spaces","opt-folder","opt-before","opt-after","opt-fixed","opt-sr","opt-manifest","seq-order"];
+var tmplTouched=false, savedFolderCol=null, saveT=null;
+function saveSettings(){
+  clearTimeout(saveT);
+  saveT=setTimeout(function(){
+    try{
+      var o={lang:LANG, tmpl:$("tmpl").value, tmplTouched:tmplTouched};
+      SETTING_IDS.forEach(function(id){ var el=$(id); o[id]= el.type==="checkbox" ? el.checked : el.value; });
+      if(COLS.length) o.folderCol=COLS[parseInt($("folder-col").value,10)]||null;
+      localStorage.setItem(SKEY, JSON.stringify(o));
+    }catch(e){}
+  },150);
+}
+function loadSettings(){
+  var o=null;
+  try{ o=JSON.parse(localStorage.getItem(SKEY)||"null"); }catch(e){}
+  if(!o) return;
+  if(o.lang==="id"||o.lang==="en") LANG=o.lang;
+  SETTING_IDS.forEach(function(id){ if(!(id in o)) return; var el=$(id); if(el.type==="checkbox") el.checked=!!o[id]; else el.value=o[id]; });
+  if(o.tmplTouched && o.tmpl){ $("tmpl").value=o.tmpl; tmplTouched=true; }
+  savedFolderCol=o.folderCol||null;
+}
+/* folder handles live in IndexedDB (localStorage cannot hold them) */
+function idb(){
+  return new Promise(function(res,rej){
+    if(!window.indexedDB) return rej();
+    var r=indexedDB.open("clipmaker",1);
+    r.onupgradeneeded=function(){ r.result.createObjectStore("handles"); };
+    r.onsuccess=function(){ res(r.result); }; r.onerror=function(){ rej(r.error); };
+  });
+}
+function idbSet(k,v){ return idb().then(function(db){ return new Promise(function(res){ var tx=db.transaction("handles","readwrite"); tx.objectStore("handles").put(v,k); tx.oncomplete=res; tx.onerror=res; }); }).catch(function(){}); }
+function idbGet(k){ return idb().then(function(db){ return new Promise(function(res){ var r=db.transaction("handles").objectStore("handles").get(k); r.onsuccess=function(){ res(r.result||null); }; r.onerror=function(){ res(null); }; }); }).catch(function(){ return null; }); }
+function idbClear(){ return idb().then(function(db){ return new Promise(function(res){ var tx=db.transaction("handles","readwrite"); tx.objectStore("handles").clear(); tx.oncomplete=res; tx.onerror=res; }); }).catch(function(){}); }
+var lastAudio=null, lastOut=null;
+function forgetAll(){
+  try{ localStorage.removeItem(SKEY); }catch(e){}
+  idbClear().then(function(){ lastAudio=null; lastOut=null; renderAudioInfo(); renderOutInfo(); toast(t("d.forgot","Remembered settings and folders cleared")); });
+}
+function ensurePermission(handle, mode){
+  var opt={mode:mode};
+  return handle.queryPermission(opt).then(function(p){
+    if(p==="granted") return true;
+    return handle.requestPermission(opt).then(function(q){ return q==="granted"; });
+  }).catch(function(){ return false; });
+}
+
+/* ================= state ================= */
+var TABLES=[];          /* [{name, headers, rows}] */
+var TBL=null;           /* combined: {rows:[cells], src:[tableIndex], orig:[rowIndexInTable]} */
+var COLS=[];
+var IDX=null;           /* {recs:[rec], byName:Map, byStem:Map, count, dups} ; rec={name, rel, file|null, entry|null} */
+var dirHandle=null, audioLabel="", audioCount=0;
+var outDir=null;
+var fileCache=new Map(), metaCache=new Map();
+
+/* ================= audio core ================= */
+function readBuf(f){
+  if(typeof f.arrayBuffer==="function") return f.arrayBuffer();
+  return new Promise(function(res,rej){ var r=new FileReader(); r.onload=function(){res(r.result);}; r.onerror=rej; r.readAsArrayBuffer(f); });
+}
+function sliceBuf(file, from, to){ return readBuf(file.slice(Math.max(0,from), Math.min(file.size,to))); }
+function fourcc(v,o){ return String.fromCharCode(v.getUint8(o),v.getUint8(o+1),v.getUint8(o+2),v.getUint8(o+3)); }
+
+function parseWavHeader(buf){
+  var v=new DataView(buf);
+  if(v.byteLength<12 || fourcc(v,0)!=="RIFF" || fourcc(v,8)!=="WAVE") return null;
+  var off=12, fmt=null, dataOff=null, dataLen=0;
+  while(off+8 <= v.byteLength){
+    var id=fourcc(v,off), sz=v.getUint32(off+4,true);
+    if(id==="fmt "){
+      var code=v.getUint16(off+8,true);
+      fmt={code:code, ch:v.getUint16(off+10,true), sr:v.getUint32(off+12,true), bits:v.getUint16(off+22,true)};
+      if(code===0xFFFE && sz>=40) fmt.code=v.getUint16(off+8+24,true);
+    }
+    if(id==="data"){ dataOff=off+8; dataLen=sz; break; }
+    off += 8 + sz + (sz%2);
+  }
+  if(!fmt || dataOff==null) return null;
+  if(!dataLen || dataOff+dataLen>1e15) dataLen=0;
+  return {kind:"wav", sr:fmt.sr, ch:fmt.ch, bits:fmt.bits, code:fmt.code, dataOff:dataOff, dataLen:dataLen};
+}
+function pcmToFloat(buf,m){
+  var bytes=m.bits/8, frames=Math.floor(buf.byteLength/(bytes*m.ch));
+  var out=new Float32Array(frames*m.ch), v=new DataView(buf), n=frames*m.ch, i,o;
+  if(m.code===3 && m.bits===32){ for(i=0;i<n;i++) out[i]=v.getFloat32(i*4,true); }
+  else if(m.bits===16){ for(i=0;i<n;i++) out[i]=v.getInt16(i*2,true)/32768; }
+  else if(m.bits===24){ for(i=0;i<n;i++){ o=i*3; out[i]=((v.getUint8(o)|(v.getUint8(o+1)<<8)|(v.getInt8(o+2)<<16)))/8388608; } }
+  else if(m.bits===32){ for(i=0;i<n;i++) out[i]=v.getInt32(i*4,true)/2147483648; }
+  else if(m.bits===8){ for(i=0;i<n;i++) out[i]=(v.getUint8(i)-128)/128; }
+  return out;
+}
+function wavRaw(file,m,startSec,durSec){
+  var bpf=(m.bits/8)*m.ch;
+  var from=m.dataOff+Math.max(0,Math.floor(startSec*m.sr))*bpf;
+  var end=m.dataLen ? (m.dataOff+m.dataLen) : file.size;
+  var to=Math.min(end, from+Math.ceil(durSec*m.sr)*bpf);
+  if(to<=from) return Promise.resolve(null);
+  return sliceBuf(file,from,to).then(function(b){ return {bytes:new Uint8Array(b), fmt:m}; });
+}
+
+/* ---- FLAC: splice a mini-file around the frames we need, let the browser decode ---- */
+var CRC8=(function(){var t=new Uint8Array(256);for(var i=0;i<256;i++){var c=i;for(var j=0;j<8;j++)c=(c&0x80)?((c<<1)^0x07)&0xff:(c<<1)&0xff;t[i]=c;}return t;})();
+function crc8(b,from,to){ var c=0; for(var i=from;i<to;i++) c=CRC8[c^b[i]]; return c; }
+function parseFlacHeader(buf){
+  var h=new Uint8Array(buf);
+  if(h.length<8 || h[0]!==0x66||h[1]!==0x4c||h[2]!==0x61||h[3]!==0x43) return null;
+  var off=4, si=null, siRaw=null;
+  while(off+4<h.length){
+    var last=h[off]&0x80, typ=h[off]&0x7f, size=(h[off+1]<<16)|(h[off+2]<<8)|h[off+3], b=off+4;
+    if(typ===0 && b+34<=h.length){
+      siRaw=h.slice(b,b+34);
+      si={ sr:(h[b+10]<<12)|(h[b+11]<<4)|(h[b+12]>>4),
+           ch:((h[b+12]>>1)&0x7)+1, bits:(((h[b+12]&1)<<4)|(h[b+13]>>4))+1,
+           total:((h[b+13]&0x0f)*4294967296)+((h[b+14]<<24)>>>0)+(h[b+15]<<16)+(h[b+16]<<8)+h[b+17] };
+    }
+    off = b + size;
+    if(last) break;
+  }
+  if(!si) return null;
+  return {kind:"flac", sr:si.sr, ch:si.ch, bits:si.bits, total:si.total, audioStart:off, siRaw:siRaw};
+}
+function findFlacSync(b, from){
+  for(var i=from;i<b.length-16;i++){
+    if(b[i]!==0xff || (b[i+1]&0xfc)!==0xf8) continue;
+    var j=i+4, bs=b[i+2]>>4, sr=b[i+2]&0x0f, nb=b[j];
+    var cnt = nb<0x80?1 : nb<0xE0?2 : nb<0xF0?3 : nb<0xF8?4 : nb<0xFC?5 : nb<0xFE?6 : 7;
+    j+=cnt;
+    if(bs===6) j+=1; else if(bs===7) j+=2;
+    if(sr===12) j+=1; else if(sr===13||sr===14) j+=2;
+    if(j>=b.length) continue;
+    if(crc8(b,i,j)===b[j]) return i;
+  }
+  return -1;
+}
+function spliceFlac(siRaw, frames){
+  var head=new Uint8Array(4+4+34);
+  head[0]=0x66;head[1]=0x4c;head[2]=0x61;head[3]=0x43;
+  head[4]=0x80; head[5]=0; head[6]=0; head[7]=34;
+  head.set(siRaw,8);
+  head[8+13]=head[8+13]&0xf0; head[8+14]=0;head[8+15]=0;head[8+16]=0;head[8+17]=0;
+  var out=new Uint8Array(head.length+frames.length);
+  out.set(head,0); out.set(frames,head.length);
+  return out.buffer;
+}
+var actx=null;
+function getCtx(){ if(!actx) actx=new (window.AudioContext||window.webkitAudioContext)(); return actx; }
+function flacSlice(file, m, startSec, durSec){
+  var dur=m.total/m.sr, bps=(file.size-m.audioStart)/Math.max(1,dur);
+  var pad=Math.max(65536, bps*1.5);
+  var from=Math.max(m.audioStart, Math.floor(m.audioStart+startSec*bps-pad));
+  var to=Math.min(file.size, Math.ceil(m.audioStart+(startSec+durSec)*bps+pad));
+  return sliceBuf(file, from, to).then(function(buf){
+    var b=new Uint8Array(buf);
+    var s=findFlacSync(b,0);
+    if(s<0) return null;
+    var mini=spliceFlac(m.siRaw, b.slice(s,b.length));
+    return getCtx().decodeAudioData(mini).then(function(ab){
+      var blockStartSec=(from+s-m.audioStart)/bps;
+      var off=Math.max(0, Math.round((startSec-blockStartSec)*ab.sampleRate));
+      var len=Math.min(ab.length-off, Math.ceil(durSec*ab.sampleRate));
+      if(len<=0) return null;
+      var chans=[];
+      for(var c=0;c<ab.numberOfChannels;c++) chans.push(ab.getChannelData(c).subarray(off,off+len));
+      return {planar:chans, sr:ab.sampleRate};
+    });
+  }).catch(function(){ return null; });
+}
+
+/* ---- WAV writer ---- */
+function writeWavBytes(pcmBytes, fmt){
+  var hdr=new ArrayBuffer(44), v=new DataView(hdr);
+  var blockAlign=fmt.ch*(fmt.bits/8), byteRate=fmt.sr*blockAlign;
+  function s(o,t){ for(var i=0;i<t.length;i++) v.setUint8(o+i,t.charCodeAt(i)); }
+  s(0,"RIFF"); v.setUint32(4,36+pcmBytes.length,true); s(8,"WAVE");
+  s(12,"fmt "); v.setUint32(16,16,true);
+  v.setUint16(20, fmt.code===3?3:1, true);
+  v.setUint16(22,fmt.ch,true); v.setUint32(24,fmt.sr,true);
+  v.setUint32(28,byteRate,true); v.setUint16(32,blockAlign,true); v.setUint16(34,fmt.bits,true);
+  s(36,"data"); v.setUint32(40,pcmBytes.length,true);
+  var out=new Uint8Array(44+pcmBytes.length);
+  out.set(new Uint8Array(hdr),0); out.set(pcmBytes,44);
+  return out;
+}
+function planarToBytes(planar, bits){
+  var ch=planar.length, n=planar[0].length, i, c;
+  if(bits===24){
+    var o24=new Uint8Array(n*ch*3), p=0;
+    for(i=0;i<n;i++) for(c=0;c<ch;c++){
+      var y=Math.max(-1,Math.min(1,planar[c][i])); var v=Math.round(y<0 ? y*8388608 : y*8388607);
+      o24[p++]=v&255; o24[p++]=(v>>8)&255; o24[p++]=(v>>16)&255;
+    }
+    return o24;
+  }
+  if(bits===32){
+    var f=new Float32Array(n*ch);
+    for(i=0;i<n;i++) for(c=0;c<ch;c++) f[i*ch+c]=planar[c][i];
+    return new Uint8Array(f.buffer);
+  }
+  var out=new Uint8Array(n*ch*2), dv=new DataView(out.buffer), k=0;
+  for(i=0;i<n;i++) for(c=0;c<ch;c++){
+    var x=Math.max(-1,Math.min(1,planar[c][i]));
+    dv.setInt16(k, x<0 ? x*32768 : x*32767, true); k+=2;
+  }
+  return out;
+}
+function resample(planar, sr, target){
+  if(!target || target===sr) return Promise.resolve({planar:planar, sr:sr});
+  var n=planar[0].length, ch=planar.length;
+  var outLen=Math.max(1, Math.round(n*target/sr));
+  var Off=window.OfflineAudioContext||window.webkitOfflineAudioContext;
+  var octx=new Off(ch, outLen, target);
+  var buf=octx.createBuffer(ch, n, sr);
+  for(var c=0;c<ch;c++) buf.copyToChannel(planar[c] instanceof Float32Array ? planar[c] : new Float32Array(planar[c]), c);
+  var src=octx.createBufferSource(); src.buffer=buf; src.connect(octx.destination); src.start(0);
+  return octx.startRendering().then(function(ab){
+    var out=[]; for(var c=0;c<ab.numberOfChannels;c++) out.push(ab.getChannelData(c));
+    return {planar:out, sr:ab.sampleRate};
+  });
+}
+function planarFromWav(r, m){
+  var fl=pcmToFloat(r.bytes.buffer.slice(r.bytes.byteOffset, r.bytes.byteOffset+r.bytes.byteLength), m);
+  var planar=[], c, i, frames=fl.length/m.ch;
+  for(c=0;c<m.ch;c++){ var a=new Float32Array(frames); for(i=0;i<frames;i++) a[i]=fl[i*m.ch+c]; planar.push(a); }
+  return planar;
+}
+function outBits(m){ return (m.code===3&&m.bits===32) ? 32 : (m.bits===24 ? 24 : 16); }
+function durationOf(m, file){
+  if(!m) return 0;
+  if(m.kind==="wav"){
+    var bpf=(m.bits/8)*m.ch;
+    var len=m.dataLen || (file.size-m.dataOff);
+    return len/(bpf*m.sr);
+  }
+  return (m.total && m.sr) ? m.total/m.sr : 0;
+}
+/* decoded floats for one stretch of one file */
+function readPlanar(file, m, start, dur){
+  if(dur<=0) return Promise.resolve(null);
+  if(m.kind==="wav") return wavRaw(file,m,start,dur).then(function(r){ return r ? {planar:planarFromWav(r,m), sr:m.sr} : null; });
+  return flacSlice(file,m,start,dur);
+}
+function concatPlanar(a,b){
+  var out=[];
+  for(var c=0;c<a.planar.length;c++){
+    var x=a.planar[c], y=(b.planar[c]||new Float32Array(0));
+    var z=new Float32Array(x.length+y.length); z.set(x,0); z.set(y,x.length); out.push(z);
+  }
+  return {planar:out, sr:a.sr};
+}
+/* a clip that may run past the end of its file continues into the next recording in sequence */
+function readSpan(file, m, start, dur, depth){
+  depth=depth||0;
+  var d0=durationOf(m,file);
+  var overflow = d0>0 ? (start+dur)-d0 : 0;
+  if(overflow<=1e-4 || depth>=3) return readPlanar(file,m,start,dur).then(function(r){ return r ? {planar:r.planar, sr:r.sr, files:1} : null; });
+  return readPlanar(file,m,start,d0-start).then(function(a){
+    if(!a) return null;
+    return nextFileAfter(file).then(function(nf){
+      if(!nf) return {planar:a.planar, sr:a.sr, files:1, cut:true};
+      return getMeta(nf).then(function(mn){
+        if(!mn || mn.sr!==m.sr || mn.ch!==m.ch) return {planar:a.planar, sr:a.sr, files:1, cut:true};
+        return readSpan(nf, mn, 0, overflow, depth+1).then(function(b){
+          if(!b) return {planar:a.planar, sr:a.sr, files:1, cut:true};
+          var j=concatPlanar(a,b); j.files=1+b.files; j.cut=b.cut; return j;
+        });
+      });
+    });
+  });
+}
+
+/* ================= table ================= */
+function parseTable(text){
+  var nl=text.indexOf("\n"), head0=nl<0?text:text.slice(0,nl);
+  var sep=(head0.match(/\t/g)||[]).length > (head0.match(/,/g)||[]).length ? "\t" : ",";
+  var lines=text.split("\n"), rows=[];
+  for(var i=0;i<lines.length;i++){
+    var L=lines[i];
+    if(L.charCodeAt(L.length-1)===13) L=L.slice(0,-1);
+    if(!L) continue;
+    if(L.indexOf('"')===-1){ rows.push(L.split(sep)); continue; }
+    var row=[], field="", q=false, j=0;
+    for(;;){
+      for(; j<L.length; j++){
+        var c=L[j];
+        if(q){ if(c==='"'){ if(L[j+1]==='"'){ field+='"'; j++; } else q=false; } else field+=c; }
+        else if(c==='"') q=true;
+        else if(c===sep){ row.push(field); field=""; }
+        else field+=c;
+      }
+      if(q && i+1<lines.length){ field+="\n"; i++; L=lines[i]; j=0; continue; }
+      break;
+    }
+    row.push(field); rows.push(row);
+  }
+  if(rows.length<2) return null;
+  return {headers:rows[0].map(function(h){ return String(h||"").trim(); }), rows:rows.slice(1)};
+}
+function pick(keys){
+  var H=COLS.map(function(h){ return h.toLowerCase(); }), k,i;
+  for(k=0;k<keys.length;k++) for(i=0;i<H.length;i++) if(H[i]===keys[k]) return i;
+  for(k=0;k<keys.length;k++) for(i=0;i<H.length;i++) if(H[i].indexOf(keys[k])!==-1) return i;
+  return -1;
+}
+function fillSelect(sel, idx, allowNone, seqOpt){
+  sel.innerHTML=(allowNone?'<option value="-1">&mdash; '+t("d.none","none")+' &mdash;</option>':"")+
+    (seqOpt?'<option value="-2">&mdash; '+t("d.fromtimeline","work it out from the stitched timeline")+' &mdash;</option>':"")+
+    COLS.map(function(h,i){ return '<option value="'+i+'">'+esc(h)+'</option>'; }).join("");
+  sel.value=String(idx);
+}
+ID["d.none"]="tidak ada"; ID["d.fromtimeline"]="hitung dari garis waktu gabungan";
+function seqMode(){ return parseInt($("c-file").value,10)===-2; }
+var MIXED=false;
+function rowSeq(row){ return seqMode() || (MIXED && (!colVal(row,"c-file") || !colVal(row,"c-start"))); }
+function needSeq(){ return seqMode() || MIXED; }
+
+function combineTables(){
+  if(!TABLES.length){ TBL=null; COLS=[]; return; }
+  var cols=[];
+  TABLES.forEach(function(tb){ tb.headers.forEach(function(h){ if(cols.indexOf(h)===-1) cols.push(h); }); });
+  var rows=[], src=[], orig=[];
+  TABLES.forEach(function(tb,ti){
+    var map=tb.headers.map(function(h){ return cols.indexOf(h); });
+    tb.rows.forEach(function(r,ri){
+      var out=new Array(cols.length).fill("");
+      for(var i=0;i<r.length && i<map.length;i++) out[map[i]]=r[i];
+      rows.push(out); src.push(ti); orig.push(ri);
+    });
+  });
+  COLS=cols; TBL={rows:rows, src:src, orig:orig};
+}
+function onTables(files){
+  files=files.filter(function(f){ return /\.(txt|csv|tsv)$/i.test(f.name); });
+  if(!files.length) return;
+  var pending=files.length;
+  files.forEach(function(file){
+    var fr=new FileReader();
+    fr.onload=function(){
+      var tb=parseTable(String(fr.result));
+      if(!tb) toast(t("d.norows","{name} has no rows under its header",{name:file.name}));
+      else {
+        var dup=TABLES.findIndex(function(x){ return x.name===file.name; });
+        var entry={name:file.name, headers:tb.headers, rows:tb.rows};
+        if(dup>=0) TABLES[dup]=entry; else TABLES.push(entry);
+      }
+      if(--pending===0) afterTables();
+    };
+    fr.readAsText(file);
+  });
+}
+function afterTables(){
+  combineTables();
+  renderTableList();
+  if(!TBL){ refresh(); return; }
+  var iFile=pick(["begin file","begin path","filepath","file name","filename","recording","source","file"]);
+  var iOff =pick(["file offset"]);
+  var iBeg =pick(["begin time","start time","start (s)","start"]);
+  var iEnd =pick(["end time","end (s)","end"]);
+  var distinctFiles=0;
+  if(iFile>=0){ var seenF={}; TBL.rows.forEach(function(r){ var v=baseName(String(r[iFile]||"").trim()); if(v && !seenF[v]){ seenF[v]=1; distinctFiles++; } }); }
+  var fileSel = (iFile>=0 && (iOff>=0 || distinctFiles===1)) ? iFile : -2;
+  fillSelect($("c-file"), fileSel, false, true);
+  fillSelect($("c-start"), iOff>=0?iOff:iBeg);
+  fillSelect($("c-end"), iEnd, true);
+  MIXED = fileSel>=0 && TBL.rows.some(function(r){ return !String(r[fileSel]||"").trim() || !String(r[iOff>=0?iOff:iBeg]||"").trim(); });
+  buildChips(); buildFilters(); buildFolderCol(); buildGalClass();
+  if(!tmplTouched){ var cc0=classCol(); $("tmpl").value = cc0>=0 ? "{"+COLS[cc0]+"}_{file}_{start}s_{dur}s" : "{file}_{start}s_{dur}s"; }
+  SEQ=null; MATCH=null; fileCache.clear(); galleryReset();
+  refresh();
+}
+function renderTableList(){
+  $("tbl-list").innerHTML=TABLES.map(function(tb,i){
+    return '<span class="pill" title="'+esc(tb.headers.join(", "))+'"><b>'+esc(tb.name)+'</b> &middot; '+tb.rows.length+' '+t("d.rows","rows")+
+      '<button type="button" data-i="'+i+'" aria-label="'+esc(t("d.remove","remove {name}",{name:tb.name}))+'">&times;</button></span>';
+  }).join("");
+  Array.prototype.forEach.call($("tbl-list").querySelectorAll("button"), function(b){
+    b.addEventListener("click", function(){ TABLES.splice(+b.dataset.i,1); afterTables(); });
+  });
+  if(!TBL){ $("tbl-info").innerHTML="<span>"+t("d.notable","No table loaded yet.")+"</span>"; return; }
+  $("tbl-info").innerHTML="<span>"+(TABLES.length>1?t("d.tables","{k} tables, ",{k:TABLES.length}):"")+
+    t("d.selections","<b>{n}</b> selection{s} &middot; <b>{c}</b> columns",{n:TBL.rows.length,s:TBL.rows.length===1?"":"s",c:COLS.length})+" <span class='ok'>&#10003;</span></span>";
+}
+
+/* ================= audio index =================
+   One structure whether the files came from a folder handle, a folder input or a drop:
+   every recording is a rec {name, rel, file|null, entry|null}; same names are kept as lists. */
+function newIndex(){ return {recs:[], byName:new Map(), byStem:new Map(), count:0, dups:0}; }
+function addRec(idx, rec){
+  idx.recs.push(rec); idx.count++;
+  var lc=rec.name.toLowerCase(), st=lc.replace(/\.[^.]+$/,"");
+  if(idx.byName.has(lc)){ idx.byName.get(lc).push(rec); if(idx.byName.get(lc).length===2) idx.dups++; } else idx.byName.set(lc,[rec]);
+  if(idx.byStem.has(st)) idx.byStem.get(st).push(rec); else idx.byStem.set(st,[rec]);
+}
+function finishIndex(idx){
+  idx.recs.sort(function(a,b){ return a.rel.localeCompare(b.rel, undefined, {numeric:true, sensitivity:"base"}); });
+  idx.recs.forEach(function(r,i){ r.i=i; });
+  IDX=idx; audioCount=idx.count;
+}
+function resetAudio(){
+  IDX=null; dirHandle=null; audioLabel=""; audioCount=0;
+  fileCache.clear(); metaCache.clear();
+  SEQ=null; MATCH=null; galleryReset();
+}
+function takeFiles(files, label){
+  files=files.filter(function(f){ return /\.(wav|flac)$/i.test(f.name); });
+  if(!files.length){ toast(t("d.nowavflac","no WAV or FLAC files in that selection")); return; }
+  resetAudio();
+  var idx=newIndex();
+  files.forEach(function(f){ addRec(idx,{name:f.name, rel:f.webkitRelativePath||f._rel||f.name, file:f, entry:null}); });
+  finishIndex(idx);
+  audioLabel=label||"";
+  renderAudioInfo(); refresh();
+}
+function indexDirectory(h){
+  resetAudio();
+  dirHandle=h; audioLabel=h.name;
+  $("aud-info").innerHTML="<span>"+t("d.looking","looking through <b>{name}</b>&hellip;",{name:esc(h.name)})+"</span>";
+  var idx=newIndex();
+  function walk(dh, rel, depth){
+    if(depth>12) return Promise.resolve();
+    var it=dh.entries?dh.entries():null;
+    if(!it) return Promise.resolve();
+    function step(){
+      return it.next().then(function(r){
+        if(r.done) return;
+        var name=r.value[0], entry=r.value[1], after;
+        if(entry.kind==="file"){
+          if(/\.(wav|flac)$/i.test(name)) addRec(idx,{name:name, rel:rel+name, file:null, entry:entry});
+          after=Promise.resolve();
+        } else after=walk(entry, rel+name+"/", depth+1);
+        return after.then(step);
+      }).catch(function(){});
+    }
+    return step();
+  }
+  return walk(h,"",0).then(function(){
+    finishIndex(idx);
+    idbSet("audio", h);
+    renderAudioInfo(); refresh();
+  });
+}
+function renderAudioInfo(){
+  var el=$("aud-info");
+  if(!IDX){
+    var h="<span>"+t("d.noaudio","No recordings connected yet.")+"</span>";
+    if(lastAudio) h+='<span>'+t("d.lasttime","Last time: <b>{name}</b>",{name:esc(lastAudio.name)})+' &middot; <button type="button" class="lnk" id="btn-audio-again">'+t("d.useagain","use it again")+'</button></span>';
+    el.innerHTML=h;
+    var b=$("btn-audio-again");
+    if(b) b.addEventListener("click", function(){
+      ensurePermission(lastAudio,"read").then(function(ok){ if(ok) indexDirectory(lastAudio); else toast(t("d.noperm","folder permission was not given")); });
+    });
+    return;
+  }
+  var h2="<span>"+(audioLabel?"<b>"+esc(audioLabel)+"</b> &middot; ":"")+t("d.recfound","<b>{n}</b> recording{s} found",{n:audioCount.toLocaleString(),s:audioCount===1?"":"s"})+" <span class='ok'>&#10003;</span></span>";
+  if(IDX.dups){
+    var ip=TBL?pick(["begin path"]):-1;
+    h2+="<span class='warn'>&#9888; "+t("d.dups","<b>{n}</b> file names appear more than once (in different subfolders). {hint}",{n:IDX.dups,
+      hint: ip>=0 ? t("d.dups.path","The table's <b>{col}</b> column is used to tell them apart.",{col:esc(COLS[ip])})
+                  : t("d.dups.nopath","The table has no Begin Path column, so the first one found is used.")})+"</span>";
+  }
+  el.innerHTML=h2;
+}
+function haveAudio(){ return !!IDX; }
+function recFile(rec){
+  if(rec.file){ if(!rec.file._rel) try{ rec.file._rel=rec.rel; }catch(e){} return Promise.resolve(rec.file); }
+  return rec.entry.getFile().then(function(f){ try{ f._rel=rec.rel; }catch(e){} rec.file=f; return f; });
+}
+function relOf(file){ return file.webkitRelativePath || file._rel || file.name; }
+/* resolve a table's file name (+ optional path, for same-name recordings) to a File */
+function fileFor(nameRaw, pathRaw){
+  var base=baseName(nameRaw);
+  if(!base || !IDX) return Promise.resolve(null);
+  var key=base.toLowerCase()+"|"+(pathRaw||"");
+  if(fileCache.has(key)) return Promise.resolve(fileCache.get(key));
+  var lc=base.toLowerCase();
+  var cands=IDX.byName.get(lc) || IDX.byStem.get(lc.replace(/\.[^.]+$/,"")) || [];
+  var rec=null;
+  if(cands.length===1) rec=cands[0];
+  else if(cands.length>1){
+    var want=String(pathRaw||"").replace(/\\/g,"/").split("/").filter(Boolean);
+    var best=-1;
+    cands.forEach(function(c){
+      var have=c.rel.split("/"), score=0;
+      for(var i=1;i<=Math.min(want.length,have.length);i++){
+        if(want[want.length-i].toLowerCase()===have[have.length-i].toLowerCase()) score++; else break;
+      }
+      if(score>best){ best=score; rec=c; }
+    });
+  }
+  var p = rec ? recFile(rec) : Promise.resolve(null);
+  return p.then(function(f){ fileCache.set(key,f); return f; });
+}
+function pathFor(row){
+  var ip=pick(["begin path"]);
+  return ip>=0 ? String(row[ip]||"").trim() : "";
+}
+function getMeta(file){
+  if(metaCache.has(file)) return Promise.resolve(metaCache.get(file));
+  return sliceBuf(file,0,Math.min(file.size,262144)).then(function(b){
+    var m=parseWavHeader(b)||parseFlacHeader(b);
+    metaCache.set(file,m);
+    return m;
+  });
+}
+function recOfFile(file){
+  if(!IDX) return null;
+  for(var i=0;i<IDX.recs.length;i++) if(IDX.recs[i].file===file) return IDX.recs[i];
+  return null;
+}
+/* the recording that follows this one: on the stitched timeline if we have one, otherwise the next name in the same folder */
+function nextFileAfter(file){
+  if(SEQ){
+    for(var i=0;i<SEQ.files.length;i++) if(SEQ.files[i].file===file) return Promise.resolve(i+1<SEQ.files.length ? SEQ.files[i+1].file : null);
+  }
+  var rec=recOfFile(file);
+  if(!rec || rec.i+1>=IDX.recs.length) return Promise.resolve(null);
+  var nx=IDX.recs[rec.i+1];
+  if(dirName(nx.rel)!==dirName(rec.rel)) return Promise.resolve(null);
+  return recFile(nx);
+}
+
+/* folder picking: button, hidden webkitdirectory input, and drag-and-drop of a folder */
+$("z-dir").addEventListener("click", function(){
+  if(!canPickFolders()){ $("in-dir").click(); return; }
+  window.showDirectoryPicker({id:"clipmaker-audio", mode:"read"}).then(indexDirectory)
+    .catch(function(e){ if(e && e.name!=="AbortError") toast(t("d.nofolder","couldn't open that folder")); });
+});
+$("in-dir").addEventListener("change", function(e){
+  var fs=Array.prototype.slice.call(e.target.files);
+  var label=fs.length && fs[0].webkitRelativePath ? fs[0].webkitRelativePath.split("/")[0] : "";
+  if(fs.length) takeFiles(fs, label);
+  e.target.value="";
+});
+function entriesToFiles(entry, rel, out){
+  return new Promise(function(res){
+    if(entry.isFile){ entry.file(function(f){ f._rel=rel+f.name; out.push(f); res(); }, function(){ res(); }); return; }
+    if(!entry.isDirectory){ res(); return; }
+    var reader=entry.createReader(), all=[];
+    (function more(){
+      reader.readEntries(function(es){
+        if(!es.length){
+          all.reduce(function(p,e){ return p.then(function(){ return entriesToFiles(e, rel+entry.name+"/", out); }); }, Promise.resolve()).then(res);
+          return;
+        }
+        all=all.concat(Array.prototype.slice.call(es)); more();
+      }, function(){ res(); });
+    })();
+  });
+}
+function onAudioDrop(e){
+  var items=e.dataTransfer.items ? Array.prototype.slice.call(e.dataTransfer.items) : [];
+  /* getAsFileSystemHandle must be called synchronously inside the drop event */
+  var handleP = (items.length && items[0].getAsFileSystemHandle) ? items.map(function(it){ return it.getAsFileSystemHandle(); }) : null;
+  if(handleP){
+    Promise.all(handleP).then(function(hs){
+      var dir=hs.filter(function(h){ return h && h.kind==="directory"; })[0];
+      if(dir) return indexDirectory(dir);
+      var fs=Array.prototype.slice.call(e.dataTransfer.files);
+      if(fs.length) takeFiles(fs,"");
+    });
+    return;
+  }
+  var entries=items.map(function(it){ return it.webkitGetAsEntry ? it.webkitGetAsEntry() : null; }).filter(Boolean);
+  if(entries.some(function(en){ return en.isDirectory; })){
+    var out=[], label=entries[0].name;
+    entries.reduce(function(p,en){ return p.then(function(){ return entriesToFiles(en,"",out); }); }, Promise.resolve()).then(function(){ takeFiles(out,label); });
+    return;
+  }
+  var fs=Array.prototype.slice.call(e.dataTransfer.files);
+  if(fs.length) takeFiles(fs,"");
+}
+
+/* ================= the stitched timeline ================= */
+var SEQ=null, seqBusy=false;
+function stampOf(name){
+  var m=String(name).match(/(20\d{2})[-_]?([01]\d)[-_]?([0-3]\d)[-_T]?([0-2]\d)([0-5]\d)([0-5]\d)/);
+  return m ? (m[1]+m[2]+m[3]+m[4]+m[5]+m[6]) : null;
+}
+function allAudioFiles(){
+  if(!IDX) return Promise.resolve([]);
+  return IDX.recs.reduce(function(p,rec){ return p.then(function(acc){ return recFile(rec).then(function(f){ acc.push(f); return acc; }, function(){ return acc; }); }); }, Promise.resolve([]));
+}
+function buildSequence(){
+  if(seqBusy) return Promise.resolve(SEQ);
+  seqBusy=true;
+  $("seq-info").innerHTML="<span>"+t("d.readlen","reading the recordings' lengths&hellip;")+"</span>";
+  return allAudioFiles().then(function(files){
+    if(!files.length){ SEQ=null; seqBusy=false; $("seq-info").innerHTML="<span class='bad'>"+t("d.noaudio","No recordings connected yet.")+"</span>"; return null; }
+    var order=$("seq-order").value;
+    files.sort(function(a,b){
+      if(order==="mtime") return (a.lastModified||0)-(b.lastModified||0);
+      if(order==="stamp"){
+        var sa=stampOf(a.name), sb=stampOf(b.name);
+        if(sa&&sb&&sa!==sb) return sa<sb?-1:1;
+      }
+      return a.name.localeCompare(b.name, undefined, {numeric:true, sensitivity:"base"});
+    });
+    return files.reduce(function(p,f){
+      return p.then(function(acc){
+        return getMeta(f).then(function(m){ acc.push({file:f, name:f.name, meta:m, dur:durationOf(m,f)}); return acc; });
+      });
+    }, Promise.resolve([])).then(function(list){
+      var tt=0;
+      list.forEach(function(e){ e.start=tt; tt+=e.dur; e.end=tt; });
+      SEQ={files:list, total:tt};
+      seqBusy=false;
+      return SEQ;
+    });
+  }).catch(function(){ seqBusy=false; SEQ=null; return null; });
+}
+function seqLookup(absSec){
+  if(!SEQ) return null;
+  var L=SEQ.files, lo=0, hi=L.length-1;
+  while(lo<=hi){
+    var mid=(lo+hi)>>1;
+    if(absSec < L[mid].start) hi=mid-1;
+    else if(absSec >= L[mid].end) lo=mid+1;
+    else return L[mid];
+  }
+  return null;
+}
+function fmtLen(sec){
+  if(sec>=3600) return t("d.hours","{h} hours",{h:(sec/3600).toFixed(1)});
+  if(sec<90) return t("d.seconds","{s} seconds",{s:Math.round(sec)});
+  return t("d.minutes","{m} minutes",{m:Math.round(sec/60)});
+}
+function renderSequence(){
+  if(!SEQ || !TBL){ $("seq-wrap").hidden=true; return null; }
+  var iSt=seqMode()?parseInt($("c-start").value,10):pick(["begin time","start time","start (s)","start"]);
+  var iEnd=seqMode()?parseInt($("c-end").value,10):pick(["end time","end (s)","end"]);
+  var iBF=pick(["begin file","begin path"]);
+  var counts={}, out=0, maxT=0, crossing=0, agree=0, disagree=0, checked=0;
+  TBL.rows.forEach(function(r){
+    if(!rowSeq(r)) return;
+    var a=parseFloat(r[iSt]); if(!isFinite(a)) return;
+    if(a>maxT) maxT=a;
+    var f=seqLookup(a);
+    if(!f){ out++; return; }
+    counts[f.name]=(counts[f.name]||0)+1;
+    var b=iEnd>=0?parseFloat(r[iEnd]):NaN;
+    if(isFinite(b) && b>f.end+0.001) crossing++;
+    if(iBF>=0){
+      var bf=baseName(String(r[iBF]||"").trim()).toLowerCase();
+      if(bf){ checked++; if(bf===f.name.toLowerCase() || stem(bf)===stem(f.name).toLowerCase()) agree++; else disagree++; }
+    }
+  });
+  $("seq-info").innerHTML="<span>"+t("d.seqinfo","<b>{n}</b> recordings &middot; <b>{len}</b> end to end &middot; the table reaches <b>{max} s</b>",{n:SEQ.files.length,len:fmtLen(SEQ.total),max:fmtS(maxT)})+
+    (out ? " &middot; <span class='bad'>"+t("d.seq.out","{n} selections fall past the end",{n:out})+"</span>"
+         : " &middot; <span class='ok'>"+t("d.seq.ok","every selection lands inside a recording &#10003;")+"</span>")+
+    (crossing ? " &middot; <span class='warn'>"+t("d.seq.cross","{n} run across a file boundary (they will be joined with the next recording)",{n:crossing})+"</span>" : "")+"</span>";
+  var h='<thead><tr>'+t("d.th","<th>#</th><th>recording</th><th>starts at</th><th>length</th><th>selections</th>")+'</tr></thead><tbody>';
+  SEQ.files.forEach(function(e,i){
+    h+='<tr><td>'+(i+1)+'</td><td class="name">'+esc(e.name)+'</td><td>'+fmtS(e.start)+' s</td>'+
+       '<td'+(e.dur?'':' class="no"')+'>'+(e.dur?fmtS(e.dur)+' s':t("d.unreadable","unreadable"))+'</td><td>'+(counts[e.name]||0)+'</td></tr>';
+  });
+  $("seq-tbl").innerHTML=h+'</tbody>';
+  $("seq-wrap").hidden=false;
+  return {out:out, crossing:crossing, agree:agree, disagree:disagree, checked:checked, maxT:maxT};
+}
+
+/* ================= locating: the plain-language summary ================= */
+var MATCH=null, matchBusy=false;
+function checkRecordings(){
+  if(matchBusy) return;
+  var iF=parseInt($("c-file").value,10);
+  if(iF<0 || !TBL || !haveAudio()) return;
+  matchBusy=true;
+  var names={}, paths={};
+  TBL.rows.forEach(function(r){ var n=baseName(String(r[iF]||"").trim()); if(n){ names[n]=(names[n]||0)+1; if(!paths[n]) paths[n]=pathFor(r); } });
+  var list=Object.keys(names), found=0, missing=[], bytes=0, i=0;
+  function step(){
+    if(i>=list.length){
+      MATCH={total:list.length, found:found, missing:missing, rowsMissing:missing.reduce(function(a,n){ return a+names[n]; },0), bytesPerSec:bytes/Math.max(1,found)};
+      matchBusy=false; refresh(); return;
+    }
+    var n=list[i++];
+    fileFor(n, paths[n]).then(function(f){
+      if(!f){ missing.push(n); return; }
+      found++;
+      return getMeta(f).then(function(m){ if(m) bytes+= m.kind==="wav" ? m.sr*m.ch*m.bits/8 : m.sr*m.ch*2; });
+    }).then(step, step);
+  }
+  step();
+}
+function notice(kind, ico, inner){ return '<div class="notice '+kind+'"><span class="ico">'+ico+'</span><div>'+inner+'</div></div>'; }
+function renderLocate(){
+  var iOff=pick(["file offset"]), iSt=parseInt($("c-start").value,10), iF=parseInt($("c-file").value,10);
+  var html="", info="";
+  if(!haveAudio()){
+    html=notice("plain","2","<p>"+t("d.step2first","Connect the recordings in step 2 and this step will show you how each sound will be found.")+"</p>");
+  } else if(!seqMode()){
+    var usingOff = iSt===iOff && iOff>=0;
+    if(usingOff){
+      html=notice("good","&#10003;","<p>"+t("d.direct","Your table has <b>{f}</b> and <b>{o}</b>, so every selection says exactly which recording it is in and how far into it the sound starts. Nothing to work out.",{f:esc(COLS[iF]),o:esc(COLS[iOff])})+"</p>");
+    } else {
+      var deep=0; TBL.rows.forEach(function(r){ if(parseFloat(r[iSt])>3600) deep++; });
+      var warn=deep>TBL.rows.length*0.2;
+      html=notice(warn?"hmm":"plain", warn?"!":"i", "<p>"+t("d.using","Using <b>{f}</b> to find the recording and <b>{s}</b> as the time inside it.",{f:esc(COLS[iF]),s:esc(COLS[iSt])})+"</p>"+
+        (warn ? "<p>"+t("d.deep","Many start times are over an hour, which looks like Raven’s stitched-together clock rather than a time inside one file. If these recordings are shorter than that, open “Which columns are being used” and pick the stitched-timeline option instead.")+"</p>" : ""));
+    }
+    if(MIXED){
+      var nSeq=TBL.rows.filter(rowSeq).length;
+      html+=notice("plain","i","<p>"+t("d.mixed","<b>{n}</b> selections (from a table without those columns) will be located through the stitched timeline below instead, using Begin Time.",{n:nSeq})+"</p>");
+      if(SEQ){ var sm=renderSequence(); if(sm && sm.out) html+=notice("bad","!","<p>"+t("d.mixed.out","<b>{n}</b> of those fall past the end of the last recording.",{n:sm.out})+"</p>"); }
+    }
+    if(MATCH){
+      if(!MATCH.missing.length){
+        info=notice("good","&#10003;","<p>"+t("d.allfound","All <b>{n}</b> recordings named in the table were found in <b>{src}</b>.",{n:MATCH.total,src:esc(audioLabel||t("d.yourfiles","your files"))})+"</p>");
+      } else {
+        var shown=MATCH.missing.slice(0,6).map(esc).join("</span>, <span class='mono'>");
+        info=notice(MATCH.found?"hmm":"bad","!","<p>"+t("d.somefound","<b>{f}</b> of <b>{n}</b> recordings named in the table were found. <b>{r}</b> selection{s} will be skipped.",{f:MATCH.found,n:MATCH.total,r:MATCH.rowsMissing,s:MATCH.rowsMissing===1?"":"s"})+"</p>"+
+          "<p>"+t("d.notfound","Not found: <span class=\"mono\">{list}</span>{more}. Check that the folder in step 2 holds these files (the names must match).",{list:shown,more:MATCH.missing.length>6?t("d.andmore"," and {n} more",{n:MATCH.missing.length-6}):""})+"</p>");
+      }
+    } else { if(!matchBusy) setTimeout(checkRecordings,0); info='<div class="status"><span>'+t("d.checking","checking the recordings…")+'</span></div>'; }
+  } else {
+    var iBF=pick(["begin file","begin path"]);
+    var intro = iOff>=0 ? t("d.tl.offonly","Your table has a File Offset column but no column naming the recording, so ")
+                        : t("d.tl.nooff","Your table has no <b>File Offset</b> column. Its times run on Raven’s single clock across all the files that were open together, so a Begin Time of 5,000 s does not mean 5,000 s into any one file. ");
+    html=notice("plain","i","<p>"+intro+t("d.tl.how","Clip Maker lines up your recordings in the order below, adds up their lengths, and works out which recording each selection falls in.")+"</p>"+
+      "<p>"+t("d.tl.cond","This is right only if the folder holds <b>exactly the files that were open in Raven</b> — no extras, none missing.")+
+      (iBF>=0 ? t("d.tl.bf"," Your table also has <b>{col}</b>, which is used to double-check the answer.",{col:esc(COLS[iBF])}) : "")+"</p>");
+    if(SEQ){
+      var s=renderSequence();
+      if(s){
+        if(s.checked){
+          if(!s.disagree) info=notice("good","&#10003;","<p>"+t("d.tl.agree","Checked against <b>{col}</b>: all <b>{n}</b> selections land in the recording the table says. The timeline is right.",{col:esc(COLS[iBF]),n:s.agree})+"</p>");
+          else info=notice("bad","!","<p>"+t("d.tl.disagree","<b>{d}</b> of {n} selections land in a different recording from the one named in <b>{col}</b>. Raven probably had a different set of files open.",{d:s.disagree,n:s.checked,col:esc(COLS[iBF])})+"</p><p>"+
+            t("d.tl.disagree2","Try another order above, or make sure the folder holds exactly the files that were open in Raven. If the table has a File Offset column, use it instead (open “Which columns are being used”).")+"</p>");
+        } else if(s.out){
+          info=notice("bad","!","<p>"+t("d.tl.out","<b>{n}</b> selections fall past the end of the last recording. Some files that were open in Raven are probably not in this folder.",{n:s.out})+"</p>");
+        } else {
+          info=notice("good","&#10003;","<p>"+t("d.tl.good","Every selection lands inside a recording. Use step 6 to look at a few and confirm the sounds sit where the boxes are.")+"</p>");
+        }
+      }
+    } else info='<div class="status"><span>'+t("d.readlen","reading the recordings' lengths&hellip;")+'</span></div>';
+  }
+  $("locate").innerHTML=html;
+  $("match-info").innerHTML=info;
+}
+
+/* ================= naming ================= */
+var BUILT=[["{file}","file","recording","recording name, no extension"],["{start}","start","start","start inside that recording, seconds"],
+           ["{end}","end","end","end inside that recording"],["{dur}","dur","length","length in seconds"],
+           ["{table}","table","table","name of the selection table"],
+           ["{n}","n","row #","row number in the table"],["{i}","i","counter","1, 2, 3 … in the order the clips are made"]];
+var PRESETS=[["Class + recording + start + length","{CLASS}_{file}_{start}s_{dur}s"],["Class + recording + start","{CLASS}_{file}_{start}s"],
+             ["Recording + start + end","{file}_{start}s_{end}s"],["Class + counter","{CLASS}_{i}"],["Table + row","{table}_row{n}"]];
+function classCol(){ return pick(["class","species","common name","annotation","label","call type","sound type","type","scientific name"]); }
+function buildChips(){
+  $("chips-built").innerHTML=BUILT.map(function(b){
+    return '<button class="chip built" type="button" data-t="'+b[0]+'" title="'+esc(t("d.tip."+b[1],b[3]))+'">'+esc(t("d.chip."+b[1],b[2]))+'</button>';
+  }).join("");
+  $("chips-cols").innerHTML=COLS.map(function(h){
+    return '<button class="chip" type="button" data-t="{'+esc(h)+'}">'+esc(h)+'</button>';
+  }).join("");
+  Array.prototype.forEach.call(document.querySelectorAll(".chips .chip"), function(c){
+    c.addEventListener("click", function(){
+      var el=$("tmpl"), s=el.selectionStart==null?el.value.length:el.selectionStart, tk=c.dataset.t;
+      var e=el.selectionEnd==null?s:el.selectionEnd;
+      el.value=el.value.slice(0,s)+tk+el.value.slice(e);
+      el.focus(); el.selectionStart=el.selectionEnd=s+tk.length;
+      tmplTouched=true; refresh(); saveSettings();
+    });
+  });
+  var cc=classCol();
+  $("presets").innerHTML=PRESETS.map(function(p,i){ return [p,i]; }).filter(function(x){ return cc>=0 || x[0][1].indexOf("{CLASS}")===-1; }).map(function(x){
+    var tp=x[0][1].replace("{CLASS}", cc>=0?"{"+COLS[cc]+"}":"");
+    return '<button class="chip" type="button" data-t="'+esc(tp)+'">'+esc(t("d.preset."+x[1],x[0][0]))+'</button>';
+  }).join("");
+  Array.prototype.forEach.call($("presets").querySelectorAll(".chip"), function(c){
+    c.addEventListener("click", function(){ $("tmpl").value=c.dataset.t; tmplTouched=true; refresh(); saveSettings(); });
+  });
+}
+function buildFolderCol(keep){
+  var prev=keep ? $("folder-col").value : null;
+  var cc=classCol();
+  $("folder-col").innerHTML=COLS.map(function(h,i){ return '<option value="'+i+'">'+esc(h)+'</option>'; }).join("");
+  if(keep && prev!=null){ $("folder-col").value=prev; return; }
+  var si = savedFolderCol ? COLS.indexOf(savedFolderCol) : -1;
+  if(si>=0){ $("folder-col").value=String(si); }
+  else if(cc>=0){ $("folder-col").value=String(cc); $("opt-folder").checked=true; }
+  else { $("opt-folder").checked=false; }
+}
+function sanitise(s){
+  s=String(s).replace(/[\/\\:*?"<>|\u0000-\u001f]/g,"-").replace(/^\.+/,"").trim();
+  if($("opt-spaces").checked) s=s.replace(/\s+/g,"_");
+  return s;
+}
+function nameFor(row, rowIdx, outIdx, times){
+  var dec=+$("opt-dec").value, pad=+$("opt-pad").value;
+  var vals={
+    file: stem(baseName(srcFor(row,times))),
+    start: times.seg0.toFixed(dec),
+    end: times.seg1.toFixed(dec),
+    dur: (times.seg1-times.seg0).toFixed(dec),
+    abs: (times.abs!=null ? times.abs : times.seg0).toFixed(dec),
+    table: stem(TABLES[TBL.src[rowIdx]].name),
+    n: String(TBL.orig[rowIdx]+1),
+    i: pad ? String(outIdx+1).padStart(pad,"0") : String(outIdx+1)
+  };
+  var out=$("tmpl").value.replace(/\{([^}]*)\}/g, function(_, key){
+    if(Object.prototype.hasOwnProperty.call(vals,key)) return vals[key];
+    var ci=COLS.indexOf(key);
+    if(ci>=0) return row[ci]==null?"":String(row[ci]).trim();
+    return "";
+  });
+  out=sanitise(out);
+  if(!out) out="clip_"+vals.i;
+  if(times.nparts>1) out+="_p"+(times.part+1);
+  return out+".wav";
+}
+function colVal(row, selId){
+  var i=parseInt($(selId).value,10);
+  return (i>=0 && row[i]!=null) ? String(row[i]).trim() : "";
+}
+function srcFor(row, times){ return (times && times.src) ? times.src : colVal(row,"c-file"); }
+function freqsFor(row){
+  var lo=pick(["low freq","low frequency","min freq","fmin"]), hi=pick(["high freq","high frequency","max freq","fmax"]);
+  var a=lo>=0?parseFloat(row[lo]):NaN, b=hi>=0?parseFloat(row[hi]):NaN;
+  return {lo:isFinite(a)?a:null, hi:isFinite(b)?b:null};
+}
+function fixedLen(){ return parseFloat($("opt-fixed").value)||0; }
+function partsFor(row){
+  var fx=fixedLen(); if(!(fx>0)) return 1;
+  var tb=baseTimes(row); if(!tb) return 1;
+  return Math.max(1, Math.ceil((tb.sel1-tb.sel0)/fx - 1e-6));
+}
+function timesFor(row, part){
+  var tb=baseTimes(row); if(!tb) return null;
+  var before=parseFloat($("opt-before").value)||0, after=parseFloat($("opt-after").value)||0;
+  var fx=fixedLen(), s0=tb.sel0, s1=tb.sel1;
+  if(fx>0){
+    var len=s1-s0;
+    if(len<=fx+1e-6){ var mid=(s0+s1)/2; s0=mid-fx/2; s1=mid+fx/2; }
+    else { s0=tb.sel0+(part||0)*fx; s1=s0+fx; }
+    if(s0<0){ s1-=s0; s0=0; }
+  }
+  return {start:Math.max(0,s0-before), end:s1+after, sel0:tb.sel0, sel1:tb.sel1, seg0:s0, seg1:s1, src:tb.src, abs:tb.abs};
+}
+/* the selection itself, in seconds inside its own recording */
+function baseTimes(row){
+  var st;
+  if(rowSeq(row)){
+    var ib=pick(["begin time","start time","start (s)","start"]);
+    st=parseFloat(seqMode() ? colVal(row,"c-start") : (ib>=0 ? row[ib] : ""));
+    if(!isFinite(st)) return null;
+    var hit=seqLookup(st);
+    if(!hit) return null;
+    var iE=seqMode() ? parseInt($("c-end").value,10) : pick(["end time","end (s)","end"]);
+    var ab=iE>=0?parseFloat(row[iE]):NaN;
+    var len=(isFinite(ab)&&ab>st) ? ab-st : 3;
+    var o0=st-hit.start;
+    return {sel0:o0, sel1:o0+len, src:hit.name, abs:st};
+  }
+  st=parseFloat(colVal(row,"c-start"));
+  if(!isFinite(st)) return null;
+  var iEnd=parseInt($("c-end").value,10);
+  var en=iEnd>=0 ? parseFloat(row[iEnd]) : NaN;
+  if(!isFinite(en) || en<=st) en=st+3;
+  var sName=(COLS[parseInt($("c-start").value,10)]||"").toLowerCase();
+  var eName=(COLS[iEnd]||"").toLowerCase();
+  if(sName.indexOf("offset")!==-1 && eName.indexOf("offset")===-1){
+    var ib2=pick(["begin time"]), ie2=pick(["end time"]);
+    var d=(ib2>=0&&ie2>=0)?(parseFloat(row[ie2])-parseFloat(row[ib2])):NaN;
+    en = st + (isFinite(d)&&d>0 ? d : 3);
+  }
+  return {sel0:st, sel1:en};
+}
+
+/* ================= filters ================= */
+function buildFilters(keep){
+  var prevCol=keep?$("f-col").value:"", prevVals=keep?Array.prototype.map.call($("f-val").selectedOptions,function(o){return o.value;}):null;
+  var counts=COLS.map(function(_,i){
+    var s=new Set();
+    for(var r=0;r<TBL.rows.length && s.size<200;r++) s.add(String(TBL.rows[r][i]||"").trim());
+    return s.size;
+  });
+  $("f-col").innerHTML='<option value="">'+t("d.everyrow","&mdash; clip every row &mdash;")+'</option>'+
+    COLS.map(function(h,i){ return '<option value="'+i+'">'+esc(h)+' ('+t("d.values","{n} different values",{n:counts[i]})+')</option>'; }).join("");
+  var ic=pick(["confidence","score"]);
+  if(ic>=0){ $("wrap-fmin").hidden=false; $("f-min-name").textContent=COLS[ic]; $("f-min").dataset.col=ic; }
+  else { $("wrap-fmin").hidden=true; delete $("f-min").dataset.col; }
+  if(keep && prevCol!==""){ $("f-col").value=prevCol; onFilterCol(true); if(prevVals) Array.prototype.forEach.call($("f-val").options,function(o){ o.selected=prevVals.indexOf(o.value)>=0; }); }
+  else { $("wrap-fval").hidden=true; $("f-col").value=""; }
+}
+function onFilterCol(quiet){
+  var i=parseInt($("f-col").value,10);
+  if(isNaN(i)){ $("wrap-fval").hidden=true; if(!quiet) refresh(); return; }
+  var c={};
+  TBL.rows.forEach(function(r){ var v=String(r[i]||"").trim(); c[v]=(c[v]||0)+1; });
+  var keys=Object.keys(c).sort(function(a,b){ return c[b]-c[a]; });
+  $("f-val").innerHTML=keys.map(function(k){ return '<option value="'+esc(k)+'" selected>'+esc(k||t("d.blank","(blank)"))+' — '+c[k]+'</option>'; }).join("");
+  $("wrap-fval").hidden=false;
+  if(!quiet) refresh();
+}
+function selectedRows(){
+  if(!TBL) return [];
+  var i=parseInt($("f-col").value,10);
+  var keep=null;
+  if(!isNaN(i) && !$("wrap-fval").hidden){
+    keep=new Set(Array.prototype.map.call($("f-val").selectedOptions, function(o){ return o.value; }));
+  }
+  var ic=$("f-min").dataset.col!=null ? parseInt($("f-min").dataset.col,10) : -1;
+  var minc=parseFloat($("f-min").value)||0;
+  var out=[];
+  TBL.rows.forEach(function(r,idx){
+    if(keep && !keep.has(String(r[i]||"").trim())) return;
+    if(ic>=0 && minc>0){ var cf=parseFloat(r[ic]); if(isFinite(cf) && cf<minc) return; }
+    if(!baseTimes(r)) return;
+    var np=partsFor(r);
+    for(var p=0;p<np;p++) out.push({row:r, idx:idx, part:p, nparts:np});
+  });
+  return out;
+}
+function timesOf(s){ var tm=timesFor(s.row, s.part); if(tm){ tm.part=s.part||0; tm.nparts=s.nparts||1; } return tm; }
+
+/* ================= refresh ================= */
+function refresh(){
+  var ready = !!TBL;
+  ["step-cols","step-which","step-name","step-check","step-out"].forEach(function(id){ $(id).hidden=!ready; });
+  $("empty").hidden=ready;
+  if(!ready) return;
+
+  $("seq-panel").hidden = !needSeq();
+  if(needSeq() && !SEQ && !seqBusy && haveAudio()){
+    buildSequence().then(function(){ refresh(); });
+  }
+  renderLocate();
+
+  var sel=selectedRows();
+  var lines=sel.slice(0,4).map(function(s,k){
+    var tm=timesOf(s);
+    var folder=$("opt-folder").checked ? sanitise(String(s.row[parseInt($("folder-col").value,10)]||"unsorted").trim())+"/" : "";
+    return folder+nameFor(s.row, s.idx, k, tm);
+  });
+  $("preview").innerHTML = lines.length
+    ? lines.map(esc).join("\n") + (sel.length>4 ? '\n<span class="dim">'+t("d.andmoreclips","…and {n} more",{n:sel.length-4})+'</span>' : "")
+    : '<span class="dim">'+t("d.nomatch","No selections match the choice in step 4.")+'</span>';
+
+  var dups=0, seen={};
+  sel.forEach(function(s,k){ var n=nameFor(s.row,s.idx,k,timesOf(s)); if(seen[n]) dups++; seen[n]=1; });
+  $("name-info").innerHTML = sel.length ? "<span>"+(dups
+    ? t("d.dupnames","<span class='warn'>{n} names would repeat</span> — they will get _2, _3 … Add the <b>counter</b> to the pattern to avoid it.",{n:dups})
+    : "<span class='ok'>"+t("d.unique","every name is unique &#10003;")+"</span>")+"</span>" : "";
+
+  var totalDur=0; sel.forEach(function(s){ var tm=timesOf(s); totalDur+=Math.max(0,tm.end-tm.start); });
+  var mins=totalDur/60;
+  var size = (MATCH && MATCH.bytesPerSec) ? totalDur*MATCH.bytesPerSec : 0;
+  var nRows=new Set(sel.map(function(s){ return s.idx; })).size;
+  $("sel-info").innerHTML="<span>"+t("d.willclip","<b>{n}</b> of {m} selections will be clipped",{n:nRows,m:TBL.rows.length})+(sel.length!==nRows?t("d.intoclips"," into <b>{k}</b> clips",{k:sel.length}):"")+
+    (sel.length ? t("d.audio"," &middot; about <b>{x}</b> of audio",{x: mins>=60?t("d.hours","{h} hours",{h:(mins/60).toFixed(1)}):mins<1.5?t("d.aminute","a minute"):t("d.minutes","{m} minutes",{m:Math.round(mins)})})+
+      (size?t("d.roughly"," &middot; roughly <b>{s}</b>",{s: size>1e9?(size/1e9).toFixed(1)+" GB":size<1e6?t("d.under1mb","under 1 MB"):Math.round(size/1e6)+" MB"}):"") : "")+"</span>";
+
+  $("n-folder").textContent = $("opt-folder").checked
+    ? t("d.folder.on","One subfolder for each different value in that column. Handy for training data and for browsing by species.")
+    : t("d.folder.off","All the clips go in one folder.");
+  $("folder-col").disabled=!$("opt-folder").checked;
+  $("btn-run").disabled = !(sel.length && haveAudio() && (!needSeq() || SEQ));
+  $("btn-gal").disabled = $("btn-run").disabled;
+}
+
+/* ================= spectrogram gallery ================= */
+var HANN=null, galPos=0, playing=null;
+function hann(n){ if(HANN&&HANN.length===n) return HANN; HANN=new Float32Array(n); for(var i=0;i<n;i++) HANN[i]=0.5-0.5*Math.cos(2*Math.PI*i/(n-1)); return HANN; }
+function fft(re,im){
+  var n=re.length, i,j,k,l,m,tr,ti;
+  for(i=1,j=0;i<n;i++){ for(k=n>>1;k&j;k>>=1) j^=k; j|=k; if(i<j){ tr=re[i];re[i]=re[j];re[j]=tr; ti=im[i];im[i]=im[j];im[j]=ti; } }
+  for(l=2;l<=n;l<<=1){
+    var ang=-2*Math.PI/l, wr=Math.cos(ang), wi=Math.sin(ang);
+    for(i=0;i<n;i+=l){
+      var cr=1, ci=0;
+      for(m=0;m<l/2;m++){
+        var a=i+m, b=a+l/2;
+        tr=re[b]*cr-im[b]*ci; ti=re[b]*ci+im[b]*cr;
+        re[b]=re[a]-tr; im[b]=im[a]-ti; re[a]+=tr; im[a]+=ti;
+        var ncr=cr*wr-ci*wi; ci=cr*wi+ci*wr; cr=ncr;
+      }
+    }
+  }
+}
+function drawSpectrogram(cv, mono, sr, topF, box){
+  var W=cv.width, H=cv.height, ctx=cv.getContext("2d");
+  var N=512, half=N/2, win=hann(N);
+  var hop=Math.max(Math.floor(N/4), Math.floor((mono.length-N)/W));
+  var frames=Math.max(1, Math.floor((mono.length-N)/hop)+1);
+  var topBin=Math.max(8, Math.min(half, Math.ceil(topF/(sr/N))));
+  var spec=new Float32Array(frames*topBin), re=new Float32Array(N), im=new Float32Array(N), f,b, mx=-1e9;
+  for(f=0;f<frames;f++){
+    var o=f*hop;
+    for(b=0;b<N;b++){ re[b]=(mono[o+b]||0)*win[b]; im[b]=0; }
+    fft(re,im);
+    for(b=0;b<topBin;b++){ var p=re[b]*re[b]+im[b]*im[b]; var db=10*Math.log10(p+1e-12); spec[f*topBin+b]=db; if(db>mx) mx=db; }
+  }
+  var range=60, img=ctx.createImageData(W,H), d=img.data;
+  for(var x=0;x<W;x++){
+    var fi=Math.min(frames-1, Math.floor(x*frames/W));
+    for(var y=0;y<H;y++){
+      var bi=Math.min(topBin-1, Math.floor((H-1-y)*topBin/H));
+      var v=(spec[fi*topBin+bi]-(mx-range))/range; if(v<0)v=0; if(v>1)v=1;
+      v=Math.pow(v,1.6);
+      var i=(y*W+x)*4;
+      d[i]=255-Math.round(v*221); d[i+1]=255-Math.round(v*207); d[i+2]=255-Math.round(v*211); d[i+3]=255;
+    }
+  }
+  ctx.putImageData(img,0,0);
+  if(box){
+    var x0=Math.max(0,Math.round(box.t0*W)), x1=Math.min(W,Math.round(box.t1*W));
+    var y1=H-Math.round(Math.min(1,(box.lo||0)/topF)*H);
+    var y0=H-Math.round(Math.min(1,(box.hi!=null?box.hi:topF)/topF)*H);
+    if(box.hi==null && box.lo==null){ y0=2; y1=H-2; }
+    ctx.strokeStyle="#e2762a"; ctx.lineWidth=2;
+    ctx.strokeRect(x0+1, y0+1, Math.max(2,x1-x0-2), Math.max(2,y1-y0-2));
+  }
+  ctx.fillStyle="rgba(34,48,44,.6)"; ctx.font="10px system-ui, sans-serif";
+  ctx.fillText(Math.round(topF/1000*10)/10+" kHz", 4, 11);
+  ctx.fillText("0", 4, H-4);
+}
+function galleryReset(){ $("gallery").innerHTML=""; galPos=0; $("btn-gal-more").hidden=true; $("gal-legend").hidden=true; $("gal-info").textContent=""; $("btn-gal").innerHTML=t("s6.show",EN["s6.show"]||"Show me 12 clips"); }
+function playClip(card, mono, sr){
+  if(playing){ playing.audio.pause(); playing.card.classList.remove("playing"); URL.revokeObjectURL(playing.url); if(playing.card===card){ playing=null; return; } playing=null; }
+  var bytes=writeWavBytes(planarToBytes([mono],16), {sr:sr,ch:1,bits:16,code:1});
+  var url=URL.createObjectURL(new Blob([bytes],{type:"audio/wav"}));
+  var a=new Audio(url);
+  playing={audio:a, card:card, url:url};
+  card.classList.add("playing");
+  a.onended=function(){ card.classList.remove("playing"); if(playing&&playing.audio===a){ URL.revokeObjectURL(url); playing=null; } };
+  a.play().catch(function(){ toast(t("d.cantplay","couldn't play that clip")); });
+}
+function galleryRows(){
+  var sel=selectedRows(), v=$("gal-class").value, ci=parseInt($("gal-class").dataset.col,10);
+  if(v==="" || isNaN(ci)) return sel;
+  return sel.filter(function(s){ return String(s.row[ci]||"").trim()===v; });
+}
+function buildGalClass(){
+  var cc=classCol(), sel=$("gal-class");
+  sel.innerHTML='<option value="">'+t("d.anyclass","any class")+'</option>';
+  if(cc<0){ sel.hidden=true; delete sel.dataset.col; return; }
+  sel.hidden=false; sel.dataset.col=cc;
+  var c={}; TBL.rows.forEach(function(r){ var v=String(r[cc]||"").trim(); c[v]=(c[v]||0)+1; });
+  sel.innerHTML+=Object.keys(c).sort(function(a,b){ return c[b]-c[a]; }).map(function(k){
+    return '<option value="'+esc(k)+'">'+esc(k||t("d.blank","(blank)"))+' ('+c[k]+')</option>'; }).join("");
+}
+function showGallery(fromStart){
+  var sel=galleryRows();
+  if(!sel.length){ toast(t("d.noclass","no selections of that class match step 4")); return; }
+  if(fromStart){ $("gallery").innerHTML=""; galPos=0; }
+  var batch=sel.slice(galPos, galPos+12);
+  galPos+=batch.length;
+  $("btn-gal").textContent = t("d.again","Start again");
+  $("btn-gal-more").hidden = galPos>=sel.length;
+  $("gal-legend").hidden=false;
+  $("gal-info").textContent = t("d.clipsof","clips {a}–{b} of {n}",{a:galPos-batch.length+1,b:galPos,n:sel.length});
+  var gal=$("gallery");
+  batch.forEach(function(s,k){
+    var tm=timesOf(s), nm=nameFor(s.row, s.idx, galPos-batch.length+k, tm), src=baseName(srcFor(s.row,tm));
+    var card=document.createElement("div"); card.className="shot";
+    var cv=document.createElement("canvas"); cv.width=500; cv.height=200;
+    var cap=document.createElement("div"); cap.className="cap";
+    cap.innerHTML="<b>"+esc(nm)+"</b>"+esc(src)+" &middot; "+fmtS(tm.sel0)+"–"+fmtS(tm.sel1)+" s"+(tm.nparts>1?" &middot; "+t("d.part","part {p} of {n}",{p:tm.part+1,n:tm.nparts}):"");
+    card.appendChild(cv); card.appendChild(cap); gal.appendChild(card);
+    var cctx=cv.getContext("2d"); cctx.fillStyle="#fbfaf6"; cctx.fillRect(0,0,cv.width,cv.height);
+    cctx.fillStyle="#98a19c"; cctx.font="13px system-ui, sans-serif"; cctx.fillText(t("d.reading","reading…"), 12, 24);
+    fileFor(src, pathFor(s.row)).then(function(file){
+      if(!file) throw {msg:t("d.recnotfound","recording not found")};
+      return getMeta(file).then(function(m){
+        if(!m) throw {msg:t("d.noheader","could not read the header")};
+        return readSpan(file, m, tm.start, tm.end-tm.start).then(function(c){
+          if(!c || !c.planar[0].length) throw {msg:t("d.emptyclip","empty clip — the time is past the end of the recording")};
+          var mono=c.planar[0];
+          var fr=freqsFor(s.row), nyq=c.sr/2;
+          var top = fr.hi!=null ? Math.min(nyq, Math.max(2000, fr.hi*1.6)) : nyq;
+          var dur=mono.length/c.sr;
+          drawSpectrogram(cv, mono, c.sr, top, {t0:Math.max(0,(tm.sel0-tm.start)/dur), t1:Math.min(1,(tm.sel1-tm.start)/dur), lo:fr.lo, hi:fr.hi});
+          card.addEventListener("click", function(){ playClip(card, mono, c.sr); });
+        });
+      });
+    }).catch(function(e){
+      cctx.fillStyle="#fbe8e3"; cctx.fillRect(0,0,cv.width,cv.height);
+      cap.innerHTML+='<div class="err">'+esc(e&&e.msg?e.msg:t("d.cantread","could not read this clip"))+'</div>';
+    });
+  });
+}
+
+/* ================= zip (store only) ================= */
+function crc32(buf){
+  var c, tb=crc32.t;
+  if(!tb){ tb=crc32.t=new Uint32Array(256);
+    for(var n=0;n<256;n++){ c=n; for(var k=0;k<8;k++) c=c&1?0xEDB88320^(c>>>1):c>>>1; tb[n]=c>>>0; } }
+  c=0xFFFFFFFF;
+  for(var i=0;i<buf.length;i++) c=tb[(c^buf[i])&0xFF]^(c>>>8);
+  return (c^0xFFFFFFFF)>>>0;
+}
+function makeZip(entries){
+  var parts=[], central=[], offset=0, enc=new TextEncoder();
+  entries.forEach(function(e){
+    var nameB=enc.encode(e.name), crc=crc32(e.data), sz=e.data.length;
+    var lh=new Uint8Array(30+nameB.length), v=new DataView(lh.buffer);
+    v.setUint32(0,0x04034b50,true); v.setUint16(4,20,true); v.setUint16(6,0x800,true); v.setUint16(8,0,true);
+    v.setUint16(10,0,true); v.setUint16(12,0,true); v.setUint32(14,crc,true);
+    v.setUint32(18,sz,true); v.setUint32(22,sz,true);
+    v.setUint16(26,nameB.length,true); v.setUint16(28,0,true);
+    lh.set(nameB,30);
+    parts.push(lh, e.data);
+    var ch=new Uint8Array(46+nameB.length), cv=new DataView(ch.buffer);
+    cv.setUint32(0,0x02014b50,true); cv.setUint16(4,20,true); cv.setUint16(6,20,true); cv.setUint16(8,0x800,true);
+    cv.setUint32(16,crc,true); cv.setUint32(20,sz,true); cv.setUint32(24,sz,true);
+    cv.setUint16(28,nameB.length,true); cv.setUint32(42,offset,true);
+    ch.set(nameB,46);
+    central.push(ch);
+    offset += lh.length + sz;
+  });
+  var cdSize=central.reduce(function(a,b){ return a+b.length; },0);
+  var end=new Uint8Array(22), ev=new DataView(end.buffer);
+  ev.setUint32(0,0x06054b50,true); ev.setUint16(8,entries.length,true); ev.setUint16(10,entries.length,true);
+  ev.setUint32(12,cdSize,true); ev.setUint32(16,offset,true);
+  return new Blob(parts.concat(central,[end]),{type:"application/zip"});
+}
+
+/* ================= manifest + readme ================= */
+function csvCell(v){ v=v==null?"":String(v); return /[",\n\r]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v; }
+function manifestCSV(recs){
+  var head=["clip","folder","source_recording","source_path","clip_start_s","clip_end_s","selection_start_s","selection_end_s","part","table","table_row","status"].concat(COLS);
+  var lines=[head.map(csvCell).join(",")];
+  recs.forEach(function(r){ lines.push(r.map(csvCell).join(",")); });
+  return new TextEncoder().encode(lines.join("\r\n")+"\r\n");
+}
+function readmeText(stats){
+  var L=[], id=LANG==="id";
+  function line(en,idn){ L.push(id?idn:en); }
+  L.push("Clip Maker v"+VERSION+(id?" — catatan klip":" — clip notes"));
+  L.push((id?"Dibuat: ":"Made: ")+new Date().toString());
+  L.push("");
+  line("Selection tables:","Tabel seleksi:");
+  TABLES.forEach(function(tb){ L.push("  "+tb.name+"  ("+tb.rows.length+(id?" baris":" rows")+")"); });
+  line("Recordings: "+(audioLabel||"(files picked by hand)")+", "+audioCount+" files",
+       "Rekaman: "+(audioLabel||"(file dipilih manual)")+", "+audioCount+" file");
+  L.push("");
+  var iF=parseInt($("c-file").value,10), iS=parseInt($("c-start").value,10), iE=parseInt($("c-end").value,10);
+  if(seqMode()) line("How sounds were located: stitched Raven timeline, recordings ordered by "+$("seq-order").options[$("seq-order").selectedIndex].text+"; start = "+COLS[iS]+", end = "+(COLS[iE]||"(none)"),
+                     "Cara suara ditemukan: garis waktu gabungan Raven, rekaman diurutkan menurut "+$("seq-order").options[$("seq-order").selectedIndex].text+"; awal = "+COLS[iS]+", akhir = "+(COLS[iE]||"(tidak ada)"));
+  else line("How sounds were located: recording from "+COLS[iF]+", start = "+COLS[iS]+", end = "+(COLS[iE]||"(none)")+(MIXED?"; rows without those values via the stitched timeline":""),
+            "Cara suara ditemukan: rekaman dari "+COLS[iF]+", awal = "+COLS[iS]+", akhir = "+(COLS[iE]||"(tidak ada)")+(MIXED?"; baris tanpa nilai itu lewat garis waktu gabungan":""));
+  var fc=$("f-col").value;
+  if(fc!==""){
+    var vals=Array.prototype.map.call($("f-val").selectedOptions,function(o){ return o.value||"(blank)"; });
+    line("Rows kept: "+COLS[+fc]+" in ["+vals.join(", ")+"]","Baris disertakan: "+COLS[+fc]+" dalam ["+vals.join(", ")+"]");
+  } else line("Rows kept: all","Baris disertakan: semua");
+  if($("f-min").dataset.col!=null && parseFloat($("f-min").value)>0) line("Minimum "+COLS[+$("f-min").dataset.col]+": "+$("f-min").value,"Minimal "+COLS[+$("f-min").dataset.col]+": "+$("f-min").value);
+  L.push("");
+  line("Name pattern: "+$("tmpl").value,"Pola nama: "+$("tmpl").value);
+  line("One folder per: "+($("opt-folder").checked?COLS[+$("folder-col").value]:"(no)"),"Satu folder per: "+($("opt-folder").checked?COLS[+$("folder-col").value]:"(tidak)"));
+  line("Decimals on times: "+$("opt-dec").value+", counter padded to "+$("opt-pad").value+" digits, spaces to underscores: "+($("opt-spaces").checked?"yes":"no"),
+       "Desimal pada waktu: "+$("opt-dec").value+", nomor urut "+$("opt-pad").value+" digit, spasi menjadi garis bawah: "+($("opt-spaces").checked?"ya":"tidak"));
+  line("Context before / after: "+$("opt-before").value+" s / "+$("opt-after").value+" s","Konteks sebelum / sesudah: "+$("opt-before").value+" s / "+$("opt-after").value+" s");
+  line("Fixed clip length: "+(fixedLen()>0?fixedLen()+" s (longer selections split into _p1, _p2 …)":"no, each selection's own length"),
+       "Panjang klip tetap: "+(fixedLen()>0?fixedLen()+" s (seleksi lebih panjang dibagi menjadi _p1, _p2 …)":"tidak, panjang asli setiap seleksi"));
+  line("Sample rate: "+(+$("opt-sr").value?$("opt-sr").value+" Hz":"same as the recording"),"Laju sampel: "+(+$("opt-sr").value?$("opt-sr").value+" Hz":"sama dengan rekaman"));
+  L.push("");
+  line("Result: "+stats.ok+" clips made, "+stats.fail+" skipped"+(stats.joined?", "+stats.joined+" joined across a file boundary":""),
+       "Hasil: "+stats.ok+" klip dibuat, "+stats.fail+" dilewati"+(stats.joined?", "+stats.joined+" disambung melewati batas file":""));
+  line("clips.csv lists every clip with its source recording, times and the original table columns.","clips.csv mencantumkan setiap klip beserta rekaman asal, waktu dan kolom tabel aslinya.");
+  L.push("");
+  line("Clip Maker: one HTML file, runs in the browser, nothing uploaded. Designed by Benjamin Gottesman (Cornell Lab of Ornithology), code written by Claude (Anthropic).",
+       "Clip Maker: satu file HTML, berjalan di browser, tidak ada yang diunggah. Dirancang oleh Benjamin Gottesman (Cornell Lab of Ornithology), kode ditulis oleh Claude (Anthropic).");
+  return new TextEncoder().encode(L.join("\r\n")+"\r\n");
+}
+
+/* ================= run ================= */
+function renderOutInfo(){
+  var el=$("out-info");
+  if(outDir){ el.innerHTML=t("d.saveinto","Saving into <b>{name}</b>",{name:esc(outDir.name)}); return; }
+  var h=t("d.nofolderyet","No folder chosen yet &mdash; the clips will download as one ZIP instead.");
+  if(lastOut && canPickFolders()) h+=' &middot; '+t("d.lasttime","Last time: <b>{name}</b>",{name:esc(lastOut.name)})+' &middot; <button type="button" class="lnk" id="btn-out-again">'+t("d.useagain","use it again")+'</button>';
+  el.innerHTML=h;
+  var b=$("btn-out-again");
+  if(b) b.addEventListener("click", function(){
+    ensurePermission(lastOut,"readwrite").then(function(ok){ if(ok){ outDir=lastOut; renderOutInfo(); } else toast(t("d.noperm","folder permission was not given")); });
+  });
+}
+$("btn-out").addEventListener("click", function(){
+  if(!canPickFolders()){ toast(t("d.nofolderaccess","this browser can't write into folders — you'll get a ZIP download")); return; }
+  window.showDirectoryPicker({id:"clipmaker-out", mode:"readwrite"}).then(function(h){
+    outDir=h; idbSet("out",h); renderOutInfo();
+  }).catch(function(e){ if(e && e.name!=="AbortError") toast(t("d.nofolder","couldn't open that folder")); });
+});
+
+var running=false;
+$("btn-run").addEventListener("click", function(){
+  if(running) return;
+  running=true;
+  var sel=selectedRows(), n=sel.length, done=0, okN=0, failN=0, joinedN=0;
+  var logEl=$("log"); logEl.hidden=false; logEl.innerHTML="";
+  var zipEntries=[], seen={}, manifest=[];
+  var fCol=parseInt($("folder-col").value,10);
+  var perFolder=$("opt-folder").checked && !isNaN(fCol);
+  var targetSr=parseInt($("opt-sr").value,10)||0, wantManifest=$("opt-manifest").checked;
+  $("btn-run").disabled=true;
+
+  function log(msg,cls){
+    var d=document.createElement("div");
+    if(cls) d.className=cls;
+    d.textContent=msg; logEl.appendChild(d); logEl.scrollTop=logEl.scrollHeight;
+  }
+  function tick(){
+    $("bar").style.width=(100*done/n).toFixed(1)+"%";
+    $("run-info").innerHTML="<b>"+done+"</b> / "+n+" &middot; "+okN+" "+t("d.made","made")+(failN?" &middot; "+failN+" "+t("d.skipped","skipped"):"");
+  }
+  function writeOut(name, bytes, sub){
+    if(outDir){
+      var p=Promise.resolve(outDir);
+      if(sub) p=outDir.getDirectoryHandle(sub,{create:true});
+      return p.then(function(d){ return d.getFileHandle(name,{create:true}); })
+              .then(function(fh){ return fh.createWritable(); })
+              .then(function(w){ return w.write(bytes).then(function(){ return w.close(); }); });
+    }
+    zipEntries.push({name:(sub?sub+"/":"")+name, data:bytes});
+    return Promise.resolve();
+  }
+  function finish(){
+    var p=Promise.resolve();
+    if(wantManifest && manifest.length){
+      var stats={ok:okN, fail:failN, joined:joinedN};
+      p=writeOut("clips.csv", manifestCSV(manifest), null).then(function(){ return writeOut("README.txt", readmeText(stats), null); })
+        .then(function(){ if(outDir) log(t("d.csvwritten","clips.csv and README.txt written"),"ok"); }, function(){ log(t("d.csvfail","could not write clips.csv"),"err"); });
+    }
+    p.then(function(){
+      running=false; $("btn-run").disabled=false;
+      if(!outDir && zipEntries.length){
+        log(t("d.zipready","ZIP ready — {n} files",{n:zipEntries.length}),"ok");
+        deliverBlob("clips.zip", makeZip(zipEntries));
+      }
+      if(joinedN) log(t("d.joined","{n} clips were joined across a file boundary",{n:joinedN}));
+      log(t("d.done","Done. {ok} clips made{skip}.",{ok:okN, skip:failN?t("d.doneskip",", {n} skipped",{n:failN}):""}), failN?"err":"ok");
+      toast(t("d.clipsmade","{n} clips made",{n:okN}));
+    });
+  }
+
+  function step(k){
+    if(k>=n){ finish(); return; }
+    var s=sel[k], tm=timesOf(s);
+    var srcName=srcFor(s.row, tm);
+    var nm=nameFor(s.row, s.idx, k, tm);
+    if(seen[nm]){ seen[nm]++; nm=nm.replace(/\.wav$/i,"_"+seen[nm]+".wav"); } else seen[nm]=1;
+    var sub=perFolder ? sanitise(String(s.row[fCol]||"unsorted").trim())||"unsorted" : null;
+    var rec=[nm, sub||"", baseName(srcName), "", fmtS(tm.start), fmtS(tm.end), fmtS(tm.sel0), fmtS(tm.sel1), (tm.part+1)+"/"+tm.nparts,
+             TABLES[TBL.src[s.idx]].name, TBL.orig[s.idx]+1, "ok"].concat(s.row.map(function(c){ return c==null?"":String(c); }));
+
+    fileFor(srcName, pathFor(s.row)).then(function(file){
+      if(!file) throw {msg:t("d.norec","no recording named {name}",{name:baseName(srcName)})};
+      rec[3]=relOf(file);
+      return getMeta(file).then(function(m){
+        if(!m) throw {msg:t("d.noheader2","could not read the header of {name}",{name:file.name})};
+        var dur=tm.end-tm.start, bits=outBits(m), fdur=durationOf(m,file);
+        if(fdur && tm.start>=fdur) throw {msg:t("d.startspast","{nm} starts {a} s into a {b} s recording",{nm:nm,a:Math.round(tm.start),b:Math.round(fdur)})};
+        var spans = fdur>0 && tm.end>fdur+1e-4;
+        if(m.kind==="wav" && !spans && (!targetSr || targetSr===m.sr)){
+          return wavRaw(file,m,tm.start,dur).then(function(r){ if(!r) throw {msg:"empty clip"}; return writeWavBytes(r.bytes, r.fmt); });
+        }
+        return readSpan(file,m,tm.start,dur).then(function(r){
+          if(!r) throw {msg:t("d.nodecode","could not decode that part of {name}",{name:file.name})};
+          if(r.files>1){ joinedN++; rec[11]="ok, joined across "+r.files+" files"; }
+          else if(r.cut) rec[11]="ok, shortened at the end of the last recording";
+          return resample(r.planar, r.sr, targetSr).then(function(o){
+            return writeWavBytes(planarToBytes(o.planar,bits), {sr:o.sr,ch:o.planar.length,bits:bits,code:bits===32?3:1});
+          });
+        });
+      });
+    }).then(function(bytes){ return writeOut(nm, bytes, sub); })
+    .then(function(){ okN++; manifest.push(rec); },
+          function(err){ failN++; rec[11]="skipped: "+((err && err.msg) ? err.msg : "failed"); manifest.push(rec); log((err && err.msg) ? err.msg : ("failed: "+nm), "err"); })
+    .then(function(){
+      done++; tick();
+      (done%12===0) ? setTimeout(function(){ step(k+1); },0) : step(k+1);
+    });
+  }
+  tick(); step(0);
+});
+
+/* ================= wiring ================= */
+function bindZone(zoneId, inputId, fn, dropFn){
+  var z=$(zoneId), inp=$(inputId);
+  if(inp){
+    z.addEventListener("keydown", function(e){ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); inp.click(); } });
+    inp.addEventListener("change", function(e){
+      var fs=Array.prototype.slice.call(e.target.files);
+      if(fs.length) fn(fs);
+      e.target.value="";
+    });
+  }
+  ["dragenter","dragover"].forEach(function(k){ z.addEventListener(k,function(e){ e.preventDefault(); z.classList.add("hot"); }); });
+  ["dragleave","drop"].forEach(function(k){ z.addEventListener(k,function(e){ e.preventDefault(); z.classList.remove("hot"); }); });
+  z.addEventListener("drop", function(e){
+    if(dropFn){ dropFn(e); return; }
+    var fs=Array.prototype.slice.call(e.dataTransfer.files);
+    if(fs.length) fn(fs);
+  });
+}
+bindZone("z-tbl","in-tbl", onTables);
+bindZone("z-files","in-files", function(fs){ takeFiles(fs,""); }, onAudioDrop);
+bindZone("z-dir", null, null, onAudioDrop);
+/* a folder dropped anywhere on the page should not navigate away */
+window.addEventListener("dragover", function(e){ e.preventDefault(); });
+window.addEventListener("drop", function(e){ e.preventDefault(); });
+
+["c-start","c-end","opt-dec","opt-pad","opt-spaces","opt-folder","folder-col","opt-before","opt-after","opt-fixed","opt-sr","opt-manifest","f-min","f-val"].forEach(function(id){
+  $(id).addEventListener("change", function(){ refresh(); saveSettings(); });
+});
+$("tmpl").addEventListener("input", function(){ tmplTouched=true; refresh(); saveSettings(); });
+$("f-col").addEventListener("change", function(){ onFilterCol(); });
+$("seq-order").addEventListener("change", function(){ SEQ=null; refresh(); saveSettings(); });
+$("c-file").addEventListener("change", function(){ MATCH=null; SEQ=null; fileCache.clear(); refresh(); });
+$("btn-gal").addEventListener("click", function(){ showGallery(true); });
+$("btn-gal-more").addEventListener("click", function(){ showGallery(false); });
+$("gal-class").addEventListener("change", function(){ galleryReset(); });
+$("lang-en").addEventListener("click", function(){ setLang("en"); });
+$("lang-id").addEventListener("click", function(){ setLang("id"); });
+
+/* ================= start ================= */
+$("embedded").hidden=!EMBEDDED;
+$("btn-dl-self").addEventListener("click", downloadSelf);
+loadSettings();
+applyLang();
+renderTableList(); renderAudioInfo(); renderOutInfo();
+refresh();
+if(!EMBEDDED) idbGet("audio").then(function(h){ if(h && h.kind==="directory"){ lastAudio=h; if(!IDX) renderAudioInfo(); } });
+if(!EMBEDDED) idbGet("out").then(function(h){ if(h && h.kind==="directory"){ lastOut=h; if(!outDir) renderOutInfo(); } });
+})();
+</script>
+</body>
+</html>
